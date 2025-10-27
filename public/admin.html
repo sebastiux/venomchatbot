@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Karuna Bot - Panel de Administración</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #ffffff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            border: 1px solid #e5e5e5;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-family: Georgia, 'Times New Roman', serif;
+            color: #000;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 400;
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1rem;
+            font-style: italic;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            border: 1px solid #e5e5e5;
+            transition: box-shadow 0.3s;
+        }
+
+        .card:hover {
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+        }
+
+        .card h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .icon {
+            font-size: 1.8rem;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1px solid #d5d5d5;
+            border-radius: 50px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #000;
+        }
+
+        button {
+            padding: 12px 25px;
+            background: #000;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        button:hover {
+            background: #333;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .btn-danger {
+            background: #fff;
+            color: #000;
+            border: 1px solid #d5d5d5;
+        }
+
+        .btn-danger:hover {
+            background: #000;
+            color: #fff;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .blacklist-items {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+
+        .blacklist-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            background: #f8f9fa;
+            border-radius: 50px;
+            margin-bottom: 10px;
+            transition: background 0.3s;
+        }
+
+        .blacklist-item:hover {
+            background: #e9ecef;
+        }
+
+        .blacklist-item span {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .blacklist-item button {
+            padding: 8px 15px;
+            font-size: 0.9rem;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 400px;
+            padding: 15px;
+            border: 1px solid #d5d5d5;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #000;
+        }
+
+        .save-btn {
+            width: 100%;
+            margin-top: 15px;
+            padding: 15px;
+            font-size: 1.1rem;
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 50px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert.success {
+            background: #f5f5f5;
+            color: #000;
+            border: 1px solid #e5e5e5;
+        }
+
+        .alert.error {
+            background: #000;
+            color: #fff;
+            border: 1px solid #000;
+        }
+
+        .alert.show {
+            display: block;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        /* Alerta local dentro de las cards */
+        .local-alert {
+            padding: 15px 20px;
+            border-radius: 50px;
+            margin-top: 15px;
+            display: none;
+            text-align: center;
+        }
+
+        .local-alert.success {
+            background: #f5f5f5;
+            color: #000;
+            border: 1px solid #e5e5e5;
+        }
+
+        .local-alert.error {
+            background: #000;
+            color: #fff;
+            border: 1px solid #000;
+        }
+
+        .local-alert.show {
+            display: block;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .card {
+                padding: 20px;
+            }
+        }
+
+        .stats {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            flex: 1;
+            padding: 20px;
+            background: #fafafa;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid #f0f0f0;
+        }
+
+        .stat-value {
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 2.5rem;
+            font-weight: 400;
+            color: #000;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 500;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border: 1px solid;
+        }
+
+        .status-connected {
+            background: #000;
+            color: #fff;
+            border-color: #000;
+        }
+
+        .status-qr {
+            background: #fff;
+            color: #000;
+            border-color: #d5d5d5;
+        }
+
+        .status-connecting {
+            background: #f5f5f5;
+            color: #666;
+            border-color: #e5e5e5;
+        }
+
+        .status-disconnected {
+            background: #fff;
+            color: #000;
+            border-color: #d5d5d5;
+        }
+
+        .qr-display {
+            text-align: center;
+            padding: 40px;
+            background: #fafafa;
+            border-radius: 12px;
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .qr-code {
+            max-width: 280px;
+            width: 100%;
+            height: auto;
+            margin: 20px 0;
+            border: 10px solid #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .qr-instructions {
+            margin-top: 20px;
+            text-align: left;
+            max-width: 400px;
+            padding: 20px 24px;
+            background: #fff;
+            border-radius: 12px;
+            border: 1px solid #e5e5e5;
+        }
+
+        .qr-instructions p {
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #000;
+        }
+
+        .qr-instructions ol {
+            margin-left: 20px;
+            color: #666;
+        }
+
+        .qr-instructions li {
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+
+        .status-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 3px solid #e5e5e5;
+            border-top-color: #000;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Karuna Bot</h1>
+            <p>Panel de Administración</p>
+        </div>
+
+        <div id="alert" class="alert"></div>
+
+        <div class="dashboard">
+            <!-- Card de Conexión -->
+            <div class="card">
+                <h2><span class="icon"></span>Conexión WhatsApp</h2>
+                <div id="connection-status-badge" style="margin-bottom: 20px;">
+                    <span class="status-badge status-connecting">Cargando...</span>
+                </div>
+                <div id="qr-display" class="qr-display">
+                    <div class="loading-spinner"></div>
+                    <p style="margin-top: 20px; color: #666;">Cargando estado de conexión...</p>
+                </div>
+            </div>
+
+            <!-- Card de Blacklist -->
+            <div class="card">
+                <h2><span class="icon"></span>Blacklist de Números</h2>
+                
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-value" id="blacklist-count">0</div>
+                        <div class="stat-label">Bloqueados</div>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <input type="text" 
+                           id="number-input" 
+                           placeholder="Ingresa número (ej: 5215512345678)"
+                           autocomplete="off">
+                    <button onclick="addToBlacklist()">Agregar</button>
+                </div>
+
+                <div class="blacklist-items" id="blacklist-container">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">—</div>
+                        <p>Cargando blacklist...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card de System Prompt -->
+            <div class="card" style="grid-column: 1 / -1;">
+                <h2><span class="icon"></span>System Prompt del Bot</h2>
+                <textarea id="system-prompt" 
+                          placeholder="Define cómo se comportará el bot con los usuarios..."></textarea>
+                <button class="save-btn" onclick="savePrompt()">Guardar Configuración</button>
+                <div id="prompt-alert" class="local-alert"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3008';
+        let pollingInterval;
+
+        function startConnectionStatusPolling() {
+            // Cargar inmediatamente
+            loadConnectionStatus();
+            
+            // Polling cada 3 segundos
+            pollingInterval = setInterval(loadConnectionStatus, 3000);
+        }
+
+        async function loadConnectionStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/api/connection-status`);
+                const data = await response.json();
+                
+                updateConnectionDisplay(data);
+            } catch (error) {
+                console.error('Error al obtener estado de conexión:', error);
+            }
+        }
+
+        function updateConnectionDisplay(data) {
+            const statusBadge = document.getElementById('connection-status-badge');
+            const qrDisplay = document.getElementById('qr-display');
+            
+            let badgeHTML = '';
+            let displayHTML = '';
+            
+            switch(data.status) {
+                case 'connected':
+                    badgeHTML = '<span class="status-badge status-connected">Conectado</span>';
+                    displayHTML = `
+                        <div class="status-icon">●</div>
+                        <h3 style="color: #000; margin-bottom: 10px;">WhatsApp Conectado</h3>
+                        <p style="color: #666;">
+                            El bot está activo y listo para recibir mensajes.
+                        </p>
+                    `;
+                    // Si está conectado, podemos parar el polling tan frecuente
+                    if (pollingInterval) {
+                        clearInterval(pollingInterval);
+                        pollingInterval = setInterval(loadConnectionStatus, 10000); // Cada 10s
+                    }
+                    break;
+                    
+                case 'qr':
+                    badgeHTML = '<span class="status-badge status-qr">Esperando escaneo</span>';
+                    displayHTML = `
+                        <div style="margin-bottom: 15px;">
+                            <h3 style="color: #000; margin-bottom: 10px;">Escanea el código QR</h3>
+                        </div>
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(data.qr)}" 
+                             class="qr-code" 
+                             alt="QR Code">
+                        <div class="qr-instructions">
+                            <p><strong>Pasos para conectar:</strong></p>
+                            <ol>
+                                <li>Abre WhatsApp en tu teléfono</li>
+                                <li>Ve a <strong>Menú</strong> → <strong>Dispositivos vinculados</strong></li>
+                                <li>Toca en <strong>Vincular un dispositivo</strong></li>
+                                <li>Escanea este código QR</li>
+                            </ol>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'connecting':
+                    badgeHTML = '<span class="status-badge status-connecting">Conectando...</span>';
+                    displayHTML = `
+                        <div class="loading-spinner"></div>
+                        <p style="margin-top: 20px; color: #666;">Estableciendo conexión con WhatsApp...</p>
+                    `;
+                    break;
+                    
+                case 'disconnected':
+                default:
+                    badgeHTML = '<span class="status-badge status-disconnected">Desconectado</span>';
+                    displayHTML = `
+                        <div class="status-icon">○</div>
+                        <h3 style="color: #000; margin-bottom: 10px;">WhatsApp Desconectado</h3>
+                        <p style="color: #666;">
+                            El bot no está conectado. Reinicia el servidor para generar un nuevo QR.
+                        </p>
+                    `;
+                    break;
+            }
+            
+            statusBadge.innerHTML = badgeHTML;
+            qrDisplay.innerHTML = displayHTML;
+        }
+
+        // Funciones de Blacklist
+        async function loadBlacklist() {
+            try {
+                const response = await fetch(`${API_BASE}/api/blacklist`);
+                const data = await response.json();
+                
+                document.getElementById('blacklist-count').textContent = data.blacklist.length;
+                
+                const container = document.getElementById('blacklist-container');
+                
+                if (data.blacklist.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">—</div>
+                            <p>No hay números en la blacklist</p>
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = data.blacklist.map(number => `
+                        <div class="blacklist-item">
+                            <span>${number}</span>
+                            <button class="btn-danger" onclick="removeFromBlacklist('${number}')">
+                                Eliminar
+                            </button>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                showAlert('Error al cargar la blacklist', 'error');
+                console.error(error);
+            }
+        }
+
+        async function addToBlacklist() {
+            const input = document.getElementById('number-input');
+            const number = input.value.trim();
+
+            if (!number) {
+                showAlert('Por favor ingresa un número', 'error');
+                return;
+            }
+
+            if (!/^\d+$/.test(number)) {
+                showAlert('El número solo debe contener dígitos', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/blacklist/add`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ number })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert(`Número ${number} agregado a la blacklist`, 'success');
+                    input.value = '';
+                    loadBlacklist();
+                } else {
+                    showAlert(data.message || 'Error al agregar número', 'error');
+                }
+            } catch (error) {
+                showAlert('Error al agregar a la blacklist', 'error');
+                console.error(error);
+            }
+        }
+
+        async function removeFromBlacklist(number) {
+            if (!confirm(`¿Eliminar ${number} de la blacklist?`)) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/blacklist/remove`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ number })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert(`Número ${number} eliminado de la blacklist`, 'success');
+                    loadBlacklist();
+                } else {
+                    showAlert(data.message || 'Error al eliminar número', 'error');
+                }
+            } catch (error) {
+                showAlert('Error al eliminar de la blacklist', 'error');
+                console.error(error);
+            }
+        }
+
+        // Funciones de System Prompt
+        async function loadSystemPrompt() {
+            try {
+                const response = await fetch(`${API_BASE}/api/prompt`);
+                const data = await response.json();
+                document.getElementById('system-prompt').value = data.systemPrompt;
+            } catch (error) {
+                showAlert('Error al cargar el prompt', 'error');
+                console.error(error);
+            }
+        }
+
+        async function savePrompt() {
+            const prompt = document.getElementById('system-prompt').value;
+
+            if (!prompt.trim()) {
+                showLocalAlert('El prompt no puede estar vacío', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/prompt`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ systemPrompt: prompt })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert('Prompt actualizado correctamente', 'success');
+                    showLocalAlert('Configuración guardada exitosamente. El bot usará esta configuración en nuevas conversaciones.', 'success');
+                } else {
+                    showLocalAlert(data.message || 'Error al guardar el prompt', 'error');
+                }
+            } catch (error) {
+                showLocalAlert('Error al guardar el prompt', 'error');
+                console.error(error);
+            }
+        }
+
+        // Función para mostrar alertas globales (arriba)
+        function showAlert(message, type) {
+            const alert = document.getElementById('alert');
+            alert.textContent = message;
+            alert.className = `alert ${type} show`;
+
+            setTimeout(() => {
+                alert.classList.remove('show');
+            }, 5000);
+        }
+
+        // Función para mostrar alertas locales (en la card del prompt)
+        function showLocalAlert(message, type) {
+            const alert = document.getElementById('prompt-alert');
+            alert.textContent = message;
+            alert.className = `local-alert ${type} show`;
+
+            setTimeout(() => {
+                alert.classList.remove('show');
+            }, 5000);
+        }
+
+        // Permitir agregar con Enter
+        document.getElementById('number-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                addToBlacklist();
+            }
+        });
+
+        // Inicializar al cargar
+        window.addEventListener('DOMContentLoaded', () => {
+            startConnectionStatusPolling();
+            loadBlacklist();
+            loadSystemPrompt();
+        });
+    </script>
+</body>
+</html>
