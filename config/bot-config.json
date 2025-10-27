@@ -1,4 +1,40 @@
 {
   "blacklist": [],
-  "systemPrompt": "Actúa como el asistente personal de Carlos Ortega CTO de Karuna"
+  "currentFlow": "carlos",
+  "systemPrompt": "Soy Carlos Ortega, apasionado por la tecnología, el buda y muy buen amigo",
+  "customFlows": {
+    "gymmamado": {
+      "name": "Gym Mamado",
+      "description": "Gestión de membresías, ventas y agenda de clases prueba",
+      "prompt": "Muy amable y sincero",
+      "hasMenu": true,
+      "menuConfig": {
+        "welcomeMessage": "Hola crayola",
+        "footerMessage": "gracias por tu atención",
+        "options": [
+          {
+            "label": "Op1",
+            "response": "resp1"
+          },
+          {
+            "label": "op2",
+            "response": "resp2"
+          },
+          {
+            "label": "op5",
+            "response": "resp3"
+          }
+        ]
+      },
+      "createdAt": "2025-10-27T22:19:33.149Z"
+    },
+    "carlos": {
+      "name": "Yo",
+      "description": "Actúa como si fuera yo",
+      "prompt": "Soy Carlos Ortega, apasionado por la tecnología, el buda y muy buen amigo",
+      "hasMenu": false,
+      "menuConfig": null,
+      "createdAt": "2025-10-27T22:26:18.458Z"
+    }
+  }
 }

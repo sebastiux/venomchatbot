@@ -87,7 +87,7 @@ const grokFlow = addKeyword(EVENTS.WELCOME)
         console.log('  Usuario:', ctx.pushName || ctx.from)
         console.log('  Mensaje:', ctx.body)
         
-        await flowDynamic('💭')
+        //await flowDynamic('💭')
         
         try {
             const response = await grokService.getResponse(ctx.from, ctx.body)
@@ -223,6 +223,137 @@ const main = async () => {
         res.writeHead(200, { 'Content-Type': 'application/json' })
         return res.end(JSON.stringify({ success, message: 'System prompt actualizado' }))
     }))
+
+    // ============= FLOW ENDPOINTS =============
+
+    // Endpoint para obtener todos los flows
+    adapterProvider.server.get('/api/flows', handleCtx(async (bot, req, res) => {
+        const currentFlow = configService.getCurrentFlow()
+        const allFlows = configService.getAllFlows()
+        
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        return res.end(JSON.stringify({ 
+            success: true, 
+            currentFlow,
+            flows: allFlows
+        }))
+    }))
+
+    // Endpoint para obtener un flow específico
+    adapterProvider.server.get('/api/flows/:flowId', handleCtx(async (bot, req, res) => {
+        const flowId = req.params.flowId
+        const flowData = configService.getFlowData(flowId)
+        
+        if (flowData) {
+            res.writeHead(200, { 'Content-Type': 'application/json' })
+            return res.end(JSON.stringify({ success: true, flow: flowData }))
+        } else {
+            res.writeHead(404, { 'Content-Type': 'application/json' })
+            return res.end(JSON.stringify({ success: false, message: 'Flow no encontrado' }))
+        }
+    }))
+
+    // Endpoint para cambiar flow activo
+    adapterProvider.server.post('/api/flow/activate', handleCtx(async (bot, req, res) => {
+        const { flowId } = req.body
+        
+        if (!flowId) {
+            res.writeHead(400, { 'Content-Type': 'application/json' })
+            return res.end(JSON.stringify({ success: false, message: 'Flow ID requerido' }))
+        }
+
+        const success = configService.setFlow(flowId)
+        
+        if (success) {
+            const newPrompt = configService.getSystemPrompt()
+            grokService.updateSystemPrompt(newPrompt)
+            
+            res.writeHead(200, { 'Content-Type': 'application/json' })
+            return res.end(JSON.stringify({ 
+                success: true, 
+                message: `Flow cambiado a ${flowId}` 
+            }))
+        } else {
+            res.writeHead(400, { 'Content-Type': 'application/json' })
+            return res.end(JSON.stringify({ 
+                success: false, 
+                message: 'Flow inválido' 
+            }))
+        }
+    }))
+
+    // Endpoint para crear flow personalizado
+    adapterProvider.server.post('/api/flows', handleCtx(async (bot, req, res) => {
+        const { flowId, name, description, prompt, hasMenu, menuConfig } = req.body
+        
+        if (!flowId || !name || !prompt) {
+            res.writeHead(400, { 'Content-Type': 'application/json' })
+            return res.end(JSON.stringify({ 
+                success: false, 
+                message: 'flowId, name y prompt son requeridos' 
+            }))
+        }
+        
+        const result = configService.createCustomFlow(
+            flowId, 
+            name, 
+            description || '', 
+            prompt,
+            hasMenu || false,
+            menuConfig || null
+        )
+        
+        res.writeHead(result.success ? 200 : 400, { 'Content-Type': 'application/json' })
+        return res.end(JSON.stringify(result))
+    }))
+
+    // Endpoint para actualizar flow personalizado
+    adapterProvider.server.put('/api/flows/:flowId', handleCtx(async (bot, req, res) => {
+        const flowId = req.params.flowId
+        const { name, description, prompt, hasMenu, menuConfig } = req.body
+        
+        if (!name || !prompt) {
+            res.writeHead(400, { 'Content-Type': 'application/json' })
+            return res.end(JSON.stringify({ 
+                success: false, 
+                message: 'name y prompt son requeridos' 
+            }))
+        }
+        
+        const result = configService.updateCustomFlow(
+            flowId, 
+            name, 
+            description || '', 
+            prompt,
+            hasMenu || false,
+            menuConfig || null
+        )
+        
+        // Si es el flow actual, actualizar en GrokService
+        if (result.success && configService.getCurrentFlow() === flowId) {
+            grokService.updateSystemPrompt(prompt)
+        }
+        
+        res.writeHead(result.success ? 200 : 400, { 'Content-Type': 'application/json' })
+        return res.end(JSON.stringify(result))
+    }))
+
+    // Endpoint para eliminar flow personalizado
+    adapterProvider.server.delete('/api/flows/:flowId', handleCtx(async (bot, req, res) => {
+        const flowId = req.params.flowId
+        const result = configService.deleteCustomFlow(flowId)
+        
+        // Si se eliminó el flow actual, actualizar GrokService con el nuevo prompt
+        if (result.success) {
+            const newPrompt = configService.getSystemPrompt()
+            grokService.updateSystemPrompt(newPrompt)
+        }
+        
+        res.writeHead(result.success ? 200 : 400, { 'Content-Type': 'application/json' })
+        return res.end(JSON.stringify(result))
+    }))
+
+    // ============= LEGACY ENDPOINTS =============
 
     // Endpoint para enviar mensajes (legacy)
     adapterProvider.server.post('/v1/messages', handleCtx(async (bot, req, res) => {

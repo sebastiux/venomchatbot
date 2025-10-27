@@ -74,8 +74,17 @@
             gap: 10px;
         }
 
-        .icon {
-            font-size: 1.8rem;
+        .card-icon {
+            width: 32px;
+            height: 32px;
+            background: #000;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
         }
 
         .input-group {
@@ -130,6 +139,16 @@
             background: #000;
             color: #fff;
             box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #000;
+            border: 1px solid #d5d5d5;
+        }
+
+        .btn-secondary:hover {
+            background: #e9ecef;
         }
 
         .blacklist-items {
@@ -187,65 +206,32 @@
             font-size: 1.1rem;
         }
 
-        .alert {
-            padding: 15px 20px;
-            border-radius: 50px;
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
             margin-bottom: 20px;
-            display: none;
         }
 
-        .alert.success {
-            background: #f5f5f5;
-            color: #000;
-            border: 1px solid #e5e5e5;
-        }
-
-        .alert.error {
-            background: #000;
-            color: #fff;
-            border: 1px solid #000;
-        }
-
-        .alert.show {
-            display: block;
-            animation: slideIn 0.3s ease-out;
-        }
-
-        /* Alerta local dentro de las cards */
-        .local-alert {
-            padding: 15px 20px;
-            border-radius: 50px;
-            margin-top: 15px;
-            display: none;
+        .stat-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
             text-align: center;
         }
 
-        .local-alert.success {
-            background: #f5f5f5;
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
             color: #000;
-            border: 1px solid #e5e5e5;
+            margin-bottom: 5px;
         }
 
-        .local-alert.error {
-            background: #000;
-            color: #fff;
-            border: 1px solid #000;
-        }
-
-        .local-alert.show {
-            display: block;
-            animation: slideIn 0.3s ease-out;
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         .empty-state {
@@ -256,132 +242,112 @@
 
         .empty-state-icon {
             font-size: 3rem;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
         }
 
-        @media (max-width: 768px) {
-            .dashboard {
-                grid-template-columns: 1fr;
-            }
-
-            .header h1 {
-                font-size: 2rem;
-            }
-
-            .card {
-                padding: 20px;
-            }
-        }
-
-        .stats {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .stat-card {
-            flex: 1;
-            padding: 20px;
-            background: #fafafa;
-            border-radius: 12px;
-            text-align: center;
-            border: 1px solid #f0f0f0;
-        }
-
-        .stat-value {
-            font-family: Georgia, 'Times New Roman', serif;
-            font-size: 2.5rem;
-            font-weight: 400;
-            color: #000;
-            margin-bottom: 5px;
-        }
-
-        .stat-label {
-            font-size: 0.75rem;
-            color: #999;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+        .alert {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
             font-weight: 500;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s;
+            z-index: 2000;
+            max-width: 400px;
+        }
+
+        .alert.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .alert.success {
+            background: #000;
+        }
+
+        .alert.error {
+            background: #dc3545;
+        }
+
+        .local-alert {
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 0.9rem;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s;
+        }
+
+        .local-alert.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .local-alert.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .local-alert.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
         }
 
         .status-badge {
             display: inline-block;
-            padding: 8px 20px;
+            padding: 8px 16px;
             border-radius: 50px;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             font-weight: 600;
-            border: 1px solid;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .status-connected {
-            background: #000;
-            color: #fff;
-            border-color: #000;
-        }
-
-        .status-qr {
-            background: #fff;
-            color: #000;
-            border-color: #d5d5d5;
+            background: #d4edda;
+            color: #155724;
         }
 
         .status-connecting {
-            background: #f5f5f5;
-            color: #666;
-            border-color: #e5e5e5;
+            background: #fff3cd;
+            color: #856404;
         }
 
         .status-disconnected {
-            background: #fff;
-            color: #000;
-            border-color: #d5d5d5;
+            background: #f8d7da;
+            color: #721c24;
         }
 
         .qr-display {
-            text-align: center;
-            padding: 40px;
-            background: #fafafa;
+            background: #f8f9fa;
+            padding: 30px;
             border-radius: 12px;
-            min-height: 300px;
+            text-align: center;
+            min-height: 200px;
             display: flex;
             flex-direction: column;
-            justify-content: center;
             align-items: center;
+            justify-content: center;
         }
 
-        .qr-code {
-            max-width: 280px;
-            width: 100%;
-            height: auto;
-            margin: 20px 0;
-            border: 10px solid #fff;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        .qr-display img {
+            max-width: 300px;
+            border: 3px solid #000;
+            border-radius: 8px;
+            padding: 15px;
+            background: white;
         }
 
-        .qr-instructions {
-            margin-top: 20px;
-            text-align: left;
-            max-width: 400px;
-            padding: 20px 24px;
-            background: #fff;
-            border-radius: 12px;
-            border: 1px solid #e5e5e5;
-        }
-
-        .qr-instructions p {
-            margin-bottom: 10px;
-            font-weight: 600;
-            color: #000;
-        }
-
-        .qr-instructions ol {
-            margin-left: 20px;
+        .qr-display p {
+            margin-top: 15px;
             color: #666;
-        }
-
-        .qr-instructions li {
-            margin-bottom: 8px;
             line-height: 1.5;
         }
 
@@ -402,6 +368,347 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+
+        /* Flow Selector Styles */
+        .flow-selector {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .flow-option {
+            padding: 15px 20px;
+            border: 2px solid #e5e5e5;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .flow-option:hover {
+            border-color: #999;
+            background: #f8f9fa;
+        }
+
+        .flow-option.active {
+            border-color: #000;
+            background: #000;
+            color: white;
+        }
+
+        .flow-option-content {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            flex: 1;
+        }
+
+        .flow-option-title {
+            font-weight: 600;
+            font-size: 1.05rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .flow-badge {
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .flow-option.active .flow-badge {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .flow-option-desc {
+            font-size: 0.85rem;
+            opacity: 0.7;
+        }
+
+        .flow-option.active .flow-option-desc {
+            opacity: 0.9;
+        }
+
+        .flow-option-actions {
+            display: flex;
+            gap: 8px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .flow-option:hover .flow-option-actions {
+            opacity: 1;
+        }
+
+        .flow-action-btn {
+            padding: 6px 12px;
+            background: white;
+            color: #000;
+            border: 1px solid #d5d5d5;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .flow-action-btn:hover {
+            background: #f8f9fa;
+            transform: translateY(-1px);
+        }
+
+        .flow-option.active .flow-action-btn {
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .flow-option.active .flow-action-btn:hover {
+            background: white;
+        }
+
+        .flow-check {
+            font-size: 1.5rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+            margin-left: 10px;
+        }
+
+        .flow-option.active .flow-check {
+            opacity: 1;
+        }
+
+        .current-flow-info {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.3s;
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s;
+        }
+
+        .modal-header {
+            padding: 25px 30px;
+            border-bottom: 1px solid #e5e5e5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+
+        .modal-close {
+            font-size: 2rem;
+            cursor: pointer;
+            color: #999;
+            transition: color 0.3s;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: #000;
+        }
+
+        .modal-body {
+            padding: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input[type="text"],
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #d5d5d5;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input[type="text"]:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #000;
+        }
+
+        .form-group textarea {
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+            min-height: 200px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 25px;
+        }
+
+        /* Toggle Switch */
+        .toggle-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 60px;
+            height: 30px;
+            background: #ccc;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .toggle-switch.active {
+            background: #000;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+
+        .toggle-switch.active .toggle-slider {
+            transform: translateX(30px);
+        }
+
+        .toggle-label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .toggle-description {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        /* Menu Configuration */
+        .menu-config {
+            display: none;
+            border: 2px solid #e5e5e5;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .menu-config.show {
+            display: block;
+        }
+
+        .menu-config h3 {
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .menu-option-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #e5e5e5;
+        }
+
+        .menu-option-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .menu-option-number {
+            font-weight: 700;
+            color: #000;
+        }
+
+        .remove-option-btn {
+            padding: 5px 12px;
+            font-size: 0.85rem;
+            background: #fff;
+            color: #dc3545;
+            border: 1px solid #dc3545;
+        }
+
+        .remove-option-btn:hover {
+            background: #dc3545;
+            color: white;
+        }
+
+        .add-option-btn {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
     </style>
 </head>
 <body>
@@ -416,7 +723,10 @@
         <div class="dashboard">
             <!-- Card de Conexión -->
             <div class="card">
-                <h2><span class="icon"></span>Conexión WhatsApp</h2>
+                <h2>
+                    <div class="card-icon">W</div>
+                    Conexión WhatsApp
+                </h2>
                 <div id="connection-status-badge" style="margin-bottom: 20px;">
                     <span class="status-badge status-connecting">Cargando...</span>
                 </div>
@@ -426,9 +736,38 @@
                 </div>
             </div>
 
+            <!-- Card de Modos del Bot -->
+            <div class="card">
+                <h2>
+                    <div class="card-icon">M</div>
+                    Modos del Bot
+                </h2>
+                <p style="color: #666; margin-bottom: 20px; font-size: 0.95rem;">
+                    Selecciona o crea modos personalizados
+                </p>
+                
+                <div class="current-flow-info">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-weight: 600; color: #333;">Modo activo:</span>
+                        <span id="current-flow-name" style="color: #000; font-weight: 700;">Cargando...</span>
+                    </div>
+                </div>
+                
+                <div class="flow-selector" id="flow-selector">
+                    <!-- Se llenará dinámicamente -->
+                </div>
+                
+                <button onclick="openCreateFlowModal()" style="width: 100%; margin-top: 15px;">
+                    Crear Modo Personalizado
+                </button>
+            </div>
+
             <!-- Card de Blacklist -->
             <div class="card">
-                <h2><span class="icon"></span>Blacklist de Números</h2>
+                <h2>
+                    <div class="card-icon">B</div>
+                    Blacklist de Números
+                </h2>
                 
                 <div class="stats">
                     <div class="stat-card">
@@ -455,7 +794,10 @@
 
             <!-- Card de System Prompt -->
             <div class="card" style="grid-column: 1 / -1;">
-                <h2><span class="icon"></span>System Prompt del Bot</h2>
+                <h2>
+                    <div class="card-icon">P</div>
+                    System Prompt del Bot
+                </h2>
                 <textarea id="system-prompt" 
                           placeholder="Define cómo se comportará el bot con los usuarios..."></textarea>
                 <button class="save-btn" onclick="savePrompt()">Guardar Configuración</button>
@@ -464,15 +806,90 @@
         </div>
     </div>
 
+    <!-- Modal para crear/editar flow -->
+    <div id="flow-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">Crear Modo Personalizado</h2>
+                <span class="modal-close" onclick="closeFlowModal()">&times;</span>
+            </div>
+            
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="flow-id">ID del Modo (sin espacios, solo letras minúsculas)</label>
+                    <input type="text" id="flow-id" placeholder="ej: gimnasio, hotel, ecommerce" />
+                </div>
+                
+                <div class="form-group">
+                    <label for="flow-name">Nombre del Modo</label>
+                    <input type="text" id="flow-name" placeholder="ej: Gimnasio Fitness" />
+                </div>
+                
+                <div class="form-group">
+                    <label for="flow-description">Descripción breve</label>
+                    <input type="text" id="flow-description" placeholder="ej: Atención y gestión de membresías" />
+                </div>
+
+                <!-- Toggle para elegir tipo de flujo -->
+                <div class="toggle-group">
+                    <div>
+                        <div class="toggle-label">Tipo de Flujo</div>
+                        <div class="toggle-description" id="flow-type-description">
+                            Modo Inteligente: Conversación libre con IA
+                        </div>
+                    </div>
+                    <div class="toggle-switch" id="menu-toggle" onclick="toggleMenuMode()">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="flow-prompt">System Prompt (instrucciones para la IA)</label>
+                    <textarea id="flow-prompt" placeholder="Define cómo se comportará el bot en este modo..."></textarea>
+                </div>
+
+                <!-- Configuración de Menú (solo visible si está activado) -->
+                <div class="menu-config" id="menu-config">
+                    <h3>Configuración de Menú</h3>
+                    
+                    <div class="form-group">
+                        <label for="menu-welcome">Mensaje de Bienvenida</label>
+                        <input type="text" id="menu-welcome" placeholder="ej: Bienvenido! ¿En qué puedo ayudarte?" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Opciones del Menú</label>
+                        <div id="menu-options">
+                            <!-- Se llenarán dinámicamente -->
+                        </div>
+                        <button class="add-option-btn btn-secondary" onclick="addMenuOption()">
+                            Agregar Opción
+                        </button>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="menu-footer">Mensaje de Pie (opcional)</label>
+                        <input type="text" id="menu-footer" placeholder="ej: Escribe el número de tu opción" />
+                    </div>
+                </div>
+                
+                <div class="modal-actions">
+                    <button onclick="closeFlowModal()" class="btn-danger">Cancelar</button>
+                    <button onclick="saveFlow()" id="save-flow-btn">Guardar Modo</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API_BASE = 'http://localhost:3008';
         let pollingInterval;
+        let editingFlowId = null;
+        let menuOptionsCount = 0;
 
+        // Connection Status Functions
         function startConnectionStatusPolling() {
-            // Cargar inmediatamente
             loadConnectionStatus();
-            
-            // Polling cada 3 segundos
             pollingInterval = setInterval(loadConnectionStatus, 3000);
         }
 
@@ -480,7 +897,6 @@
             try {
                 const response = await fetch(`${API_BASE}/api/connection-status`);
                 const data = await response.json();
-                
                 updateConnectionDisplay(data);
             } catch (error) {
                 console.error('Error al obtener estado de conexión:', error);
@@ -504,83 +920,61 @@
                             El bot está activo y listo para recibir mensajes.
                         </p>
                     `;
-                    // Si está conectado, podemos parar el polling tan frecuente
-                    if (pollingInterval) {
-                        clearInterval(pollingInterval);
-                        pollingInterval = setInterval(loadConnectionStatus, 10000); // Cada 10s
-                    }
                     break;
-                    
                 case 'qr':
-                    badgeHTML = '<span class="status-badge status-qr">Esperando escaneo</span>';
+                    badgeHTML = '<span class="status-badge status-connecting">Esperando Escaneo</span>';
                     displayHTML = `
-                        <div style="margin-bottom: 15px;">
-                            <h3 style="color: #000; margin-bottom: 10px;">Escanea el código QR</h3>
-                        </div>
-                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(data.qr)}" 
-                             class="qr-code" 
-                             alt="QR Code">
-                        <div class="qr-instructions">
-                            <p><strong>Pasos para conectar:</strong></p>
-                            <ol>
-                                <li>Abre WhatsApp en tu teléfono</li>
-                                <li>Ve a <strong>Menú</strong> → <strong>Dispositivos vinculados</strong></li>
-                                <li>Toca en <strong>Vincular un dispositivo</strong></li>
-                                <li>Escanea este código QR</li>
-                            </ol>
-                        </div>
+                        <h3 style="color: #000; margin-bottom: 15px;">Escanea el código QR</h3>
+                        <img src="${data.qr}" alt="QR Code" />
+                        <p style="color: #666;">
+                            Abre WhatsApp en tu teléfono y escanea este código
+                        </p>
                     `;
                     break;
-                    
                 case 'connecting':
-                    badgeHTML = '<span class="status-badge status-connecting">Conectando...</span>';
+                    badgeHTML = '<span class="status-badge status-connecting">Conectando</span>';
                     displayHTML = `
                         <div class="loading-spinner"></div>
-                        <p style="margin-top: 20px; color: #666;">Estableciendo conexión con WhatsApp...</p>
+                        <p style="margin-top: 20px; color: #666;">Conectando con WhatsApp...</p>
                     `;
                     break;
-                    
-                case 'disconnected':
                 default:
                     badgeHTML = '<span class="status-badge status-disconnected">Desconectado</span>';
                     displayHTML = `
                         <div class="status-icon">○</div>
                         <h3 style="color: #000; margin-bottom: 10px;">WhatsApp Desconectado</h3>
                         <p style="color: #666;">
-                            El bot no está conectado. Reinicia el servidor para generar un nuevo QR.
+                            El bot no está conectado. Reinicia el servidor.
                         </p>
                     `;
-                    break;
             }
             
             statusBadge.innerHTML = badgeHTML;
             qrDisplay.innerHTML = displayHTML;
         }
 
-        // Funciones de Blacklist
+        // Blacklist Functions
         async function loadBlacklist() {
             try {
                 const response = await fetch(`${API_BASE}/api/blacklist`);
                 const data = await response.json();
-                
-                document.getElementById('blacklist-count').textContent = data.blacklist.length;
-                
                 const container = document.getElementById('blacklist-container');
-                
+                const count = document.getElementById('blacklist-count');
+
+                count.textContent = data.blacklist.length;
+
                 if (data.blacklist.length === 0) {
                     container.innerHTML = `
                         <div class="empty-state">
                             <div class="empty-state-icon">—</div>
-                            <p>No hay números en la blacklist</p>
+                            <p>No hay números bloqueados</p>
                         </div>
                     `;
                 } else {
                     container.innerHTML = data.blacklist.map(number => `
                         <div class="blacklist-item">
                             <span>${number}</span>
-                            <button class="btn-danger" onclick="removeFromBlacklist('${number}')">
-                                Eliminar
-                            </button>
+                            <button class="btn-danger" onclick="removeFromBlacklist('${number}')">Eliminar</button>
                         </div>
                     `).join('');
                 }
@@ -595,12 +989,7 @@
             const number = input.value.trim();
 
             if (!number) {
-                showAlert('Por favor ingresa un número', 'error');
-                return;
-            }
-
-            if (!/^\d+$/.test(number)) {
-                showAlert('El número solo debe contener dígitos', 'error');
+                showAlert('Ingresa un número válido', 'error');
                 return;
             }
 
@@ -614,7 +1003,7 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    showAlert(`Número ${number} agregado a la blacklist`, 'success');
+                    showAlert(`Número ${number} agregado a blacklist`, 'success');
                     input.value = '';
                     loadBlacklist();
                 } else {
@@ -627,7 +1016,9 @@
         }
 
         async function removeFromBlacklist(number) {
-            if (!confirm(`¿Eliminar ${number} de la blacklist?`)) return;
+            if (!confirm(`¿Eliminar ${number} de la blacklist?`)) {
+                return;
+            }
 
             try {
                 const response = await fetch(`${API_BASE}/api/blacklist/remove`, {
@@ -650,7 +1041,7 @@
             }
         }
 
-        // Funciones de System Prompt
+        // System Prompt Functions
         async function loadSystemPrompt() {
             try {
                 const response = await fetch(`${API_BASE}/api/prompt`);
@@ -681,7 +1072,7 @@
 
                 if (data.success) {
                     showAlert('Prompt actualizado correctamente', 'success');
-                    showLocalAlert('Configuración guardada exitosamente. El bot usará esta configuración en nuevas conversaciones.', 'success');
+                    showLocalAlert('Configuración guardada exitosamente.', 'success');
                 } else {
                     showLocalAlert(data.message || 'Error al guardar el prompt', 'error');
                 }
@@ -691,7 +1082,330 @@
             }
         }
 
-        // Función para mostrar alertas globales (arriba)
+        // Flow Management Functions
+        async function loadFlows() {
+            try {
+                const response = await fetch(`${API_BASE}/api/flows`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateFlowDisplay(data.currentFlow, data.flows);
+                }
+            } catch (error) {
+                console.error('Error al cargar flows:', error);
+            }
+        }
+
+        function updateFlowDisplay(currentFlow, flows) {
+            const selector = document.getElementById('flow-selector');
+            const flowName = document.getElementById('current-flow-name');
+            
+            const currentFlowData = flows[currentFlow];
+            flowName.textContent = currentFlowData ? currentFlowData.name : currentFlow;
+            
+            selector.innerHTML = Object.keys(flows).map(flowId => {
+                const flow = flows[flowId];
+                const isActive = flowId === currentFlow;
+                const isDefault = flow.isDefault;
+                
+                return `
+                    <div class="flow-option ${isActive ? 'active' : ''}" 
+                         onclick="activateFlow('${flowId}')">
+                        <div class="flow-option-content">
+                            <div class="flow-option-title">
+                                ${flow.name}
+                                ${isDefault ? '<span class="flow-badge">Predefinido</span>' : '<span class="flow-badge">Personalizado</span>'}
+                            </div>
+                            <div class="flow-option-desc">
+                                ${flow.description}
+                            </div>
+                        </div>
+                        <div class="flow-option-actions" onclick="event.stopPropagation()">
+                            ${!isDefault ? `
+                                <button class="flow-action-btn" onclick="editFlow('${flowId}')">
+                                    Editar
+                                </button>
+                                <button class="flow-action-btn" onclick="deleteFlow('${flowId}')">
+                                    Eliminar
+                                </button>
+                            ` : ''}
+                        </div>
+                        <div class="flow-check">✓</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function activateFlow(flowId) {
+            try {
+                const response = await fetch(`${API_BASE}/api/flow/activate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ flowId })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert(`Modo activado: ${flowId}`, 'success');
+                    loadFlows();
+                    loadSystemPrompt();
+                } else {
+                    showAlert(data.message || 'Error al activar modo', 'error');
+                }
+            } catch (error) {
+                showAlert('Error al activar el modo', 'error');
+                console.error(error);
+            }
+        }
+
+        function openCreateFlowModal() {
+            editingFlowId = null;
+            document.getElementById('modal-title').textContent = 'Crear Modo Personalizado';
+            document.getElementById('flow-id').value = '';
+            document.getElementById('flow-id').disabled = false;
+            document.getElementById('flow-name').value = '';
+            document.getElementById('flow-description').value = '';
+            document.getElementById('flow-prompt').value = '';
+            document.getElementById('save-flow-btn').textContent = 'Crear Modo';
+            
+            // Reset menu toggle
+            document.getElementById('menu-toggle').classList.remove('active');
+            document.getElementById('menu-config').classList.remove('show');
+            document.getElementById('flow-type-description').textContent = 'Modo Inteligente: Conversación libre con IA';
+            
+            // Clear menu fields
+            document.getElementById('menu-welcome').value = '';
+            document.getElementById('menu-footer').value = '';
+            menuOptionsCount = 0;
+            document.getElementById('menu-options').innerHTML = '';
+            
+            document.getElementById('flow-modal').classList.add('show');
+        }
+
+        async function editFlow(flowId) {
+            try {
+                const response = await fetch(`${API_BASE}/api/flows/${flowId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    editingFlowId = flowId;
+                    document.getElementById('modal-title').textContent = 'Editar Modo Personalizado';
+                    document.getElementById('flow-id').value = flowId;
+                    document.getElementById('flow-id').disabled = true;
+                    document.getElementById('flow-name').value = data.flow.name;
+                    document.getElementById('flow-description').value = data.flow.description;
+                    document.getElementById('flow-prompt').value = data.flow.prompt;
+                    document.getElementById('save-flow-btn').textContent = 'Actualizar Modo';
+                    
+                    // Set menu toggle
+                    const hasMenu = data.flow.hasMenu || false;
+                    if (hasMenu) {
+                        document.getElementById('menu-toggle').classList.add('active');
+                        document.getElementById('menu-config').classList.add('show');
+                        document.getElementById('flow-type-description').textContent = 'Modo Menú: Opciones predefinidas numeradas';
+                        
+                        // Load menu config
+                        if (data.flow.menuConfig) {
+                            document.getElementById('menu-welcome').value = data.flow.menuConfig.welcomeMessage || '';
+                            document.getElementById('menu-footer').value = data.flow.menuConfig.footerMessage || '';
+                            
+                            // Load menu options
+                            menuOptionsCount = 0;
+                            document.getElementById('menu-options').innerHTML = '';
+                            if (data.flow.menuConfig.options) {
+                                data.flow.menuConfig.options.forEach(option => {
+                                    addMenuOption(option.label, option.response);
+                                });
+                            }
+                        }
+                    } else {
+                        document.getElementById('menu-toggle').classList.remove('active');
+                        document.getElementById('menu-config').classList.remove('show');
+                        document.getElementById('flow-type-description').textContent = 'Modo Inteligente: Conversación libre con IA';
+                    }
+                    
+                    document.getElementById('flow-modal').classList.add('show');
+                }
+            } catch (error) {
+                showAlert('Error al cargar el modo', 'error');
+                console.error(error);
+            }
+        }
+
+        async function saveFlow() {
+            const flowId = document.getElementById('flow-id').value.trim().toLowerCase();
+            const name = document.getElementById('flow-name').value.trim();
+            const description = document.getElementById('flow-description').value.trim();
+            const prompt = document.getElementById('flow-prompt').value.trim();
+            const hasMenu = document.getElementById('menu-toggle').classList.contains('active');
+            
+            if (!flowId || !name || !prompt) {
+                showAlert('Por favor completa todos los campos requeridos', 'error');
+                return;
+            }
+
+            let menuConfig = null;
+            if (hasMenu) {
+                const welcomeMessage = document.getElementById('menu-welcome').value.trim();
+                const footerMessage = document.getElementById('menu-footer').value.trim();
+                
+                if (!welcomeMessage) {
+                    showAlert('El mensaje de bienvenida es requerido para el modo menú', 'error');
+                    return;
+                }
+
+                const options = [];
+                const optionElements = document.querySelectorAll('.menu-option-item');
+                
+                if (optionElements.length === 0) {
+                    showAlert('Debes agregar al menos una opción al menú', 'error');
+                    return;
+                }
+
+                optionElements.forEach((element, index) => {
+                    const label = element.querySelector(`#option-label-${index}`).value.trim();
+                    const response = element.querySelector(`#option-response-${index}`).value.trim();
+                    
+                    if (label && response) {
+                        options.push({ label, response });
+                    }
+                });
+
+                if (options.length === 0) {
+                    showAlert('Completa al menos una opción del menú', 'error');
+                    return;
+                }
+
+                menuConfig = {
+                    welcomeMessage,
+                    footerMessage: footerMessage || 'Escribe el número de tu opción',
+                    options
+                };
+            }
+            
+            try {
+                let response;
+                
+                if (editingFlowId) {
+                    response = await fetch(`${API_BASE}/api/flows/${editingFlowId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, description, prompt, hasMenu, menuConfig })
+                    });
+                } else {
+                    response = await fetch(`${API_BASE}/api/flows`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ flowId, name, description, prompt, hasMenu, menuConfig })
+                    });
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    closeFlowModal();
+                    loadFlows();
+                } else {
+                    showAlert(data.message || 'Error al guardar el modo', 'error');
+                }
+            } catch (error) {
+                showAlert('Error al guardar el modo', 'error');
+                console.error(error);
+            }
+        }
+
+        async function deleteFlow(flowId) {
+            if (!confirm('¿Estás seguro de que deseas eliminar este modo personalizado?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/flows/${flowId}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('Modo eliminado correctamente', 'success');
+                    loadFlows();
+                } else {
+                    showAlert(data.message || 'Error al eliminar el modo', 'error');
+                }
+            } catch (error) {
+                showAlert('Error al eliminar el modo', 'error');
+                console.error(error);
+            }
+        }
+
+        function closeFlowModal() {
+            document.getElementById('flow-modal').classList.remove('show');
+            editingFlowId = null;
+        }
+
+        // Menu Toggle Functions
+        function toggleMenuMode() {
+            const toggle = document.getElementById('menu-toggle');
+            const menuConfig = document.getElementById('menu-config');
+            const description = document.getElementById('flow-type-description');
+            
+            toggle.classList.toggle('active');
+            
+            if (toggle.classList.contains('active')) {
+                menuConfig.classList.add('show');
+                description.textContent = 'Modo Menú: Opciones predefinidas numeradas';
+                
+                // Add default options if empty
+                if (menuOptionsCount === 0) {
+                    addMenuOption();
+                    addMenuOption();
+                }
+            } else {
+                menuConfig.classList.remove('show');
+                description.textContent = 'Modo Inteligente: Conversación libre con IA';
+            }
+        }
+
+        function addMenuOption(label = '', response = '') {
+            const container = document.getElementById('menu-options');
+            const optionIndex = menuOptionsCount++;
+            
+            const optionHTML = `
+                <div class="menu-option-item" id="menu-option-${optionIndex}">
+                    <div class="menu-option-header">
+                        <span class="menu-option-number">Opción ${optionIndex + 1}</span>
+                        <button class="remove-option-btn" onclick="removeMenuOption(${optionIndex})">
+                            Eliminar
+                        </button>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 10px;">
+                        <label for="option-label-${optionIndex}">Etiqueta (lo que ve el usuario)</label>
+                        <input type="text" id="option-label-${optionIndex}" 
+                               value="${label}" 
+                               placeholder="ej: Ver horarios" />
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="option-response-${optionIndex}">Respuesta</label>
+                        <textarea id="option-response-${optionIndex}" 
+                                  rows="3" 
+                                  placeholder="ej: Nuestros horarios son...">${response}</textarea>
+                    </div>
+                </div>
+            `;
+            
+            container.insertAdjacentHTML('beforeend', optionHTML);
+        }
+
+        function removeMenuOption(index) {
+            const element = document.getElementById(`menu-option-${index}`);
+            if (element) {
+                element.remove();
+            }
+        }
+
+        // Alert Functions
         function showAlert(message, type) {
             const alert = document.getElementById('alert');
             alert.textContent = message;
@@ -702,7 +1416,6 @@
             }, 5000);
         }
 
-        // Función para mostrar alertas locales (en la card del prompt)
         function showLocalAlert(message, type) {
             const alert = document.getElementById('prompt-alert');
             alert.textContent = message;
@@ -713,18 +1426,26 @@
             }, 5000);
         }
 
-        // Permitir agregar con Enter
+        // Event Listeners
         document.getElementById('number-input').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 addToBlacklist();
             }
         });
 
-        // Inicializar al cargar
+        document.addEventListener('click', (e) => {
+            const modal = document.getElementById('flow-modal');
+            if (e.target === modal) {
+                closeFlowModal();
+            }
+        });
+
+        // Initialize
         window.addEventListener('DOMContentLoaded', () => {
             startConnectionStatusPolling();
             loadBlacklist();
             loadSystemPrompt();
+            loadFlows();
         });
     </script>
 </body>

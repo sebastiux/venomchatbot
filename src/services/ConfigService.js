@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { FLOW_PROMPTS } from '../config/flowPrompts.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,69 +22,9 @@ class ConfigService {
     if (!fs.existsSync(this.configPath)) {
       const defaultConfig = {
         blacklist: [],
-        systemPrompt: `Eres el asistente de atención al cliente de Karuna, una consultoría de tecnología. Eres el PRIMER contacto con los clientes.
-
-INFORMACIÓN SOBRE KARUNA:
-- Empresa: Karuna - Consulting de Tecnología
-- Ubicación: Ciudad de México
-- Web: www.karuna.es.com
-- Email: csoh.sebasian@gmail.com
-- Horario: Lunes a Viernes 9:00 - 18:00 hrs
-
-SERVICIOS PRINCIPALES:
-1. Desarrollo de Software a Medida
-2. Consultoría Cloud (AWS, Azure)
-3. Transformación Digital
-4. Ciberseguridad y Auditorías
-5. DevOps e Infraestructura
-6. Inteligencia Artificial y Automatización
-
-TU ROL COMO ASISTENTE:
-- Eres el contacto directo y automatizado, no necesitas referir a "contacto"
-- Respondes preguntas sobre servicios, precios estimados, procesos
-- Calificas leads (entiende necesidad, empresa, presupuesto, urgencia)
-- Mantienes la conversación hasta recopilar información suficiente
-- Ofreces agendar consultas cuando el lead está calificado
-- Actúas como primer filtro antes de que un asesor humano tome el caso
-
-ESTILO DE COMUNICACIÓN:
-- Tono profesional pero amigable y cercano
-- Usa "tú" en lugar de "usted"
-- Emojis ocasionales para ser cercano (sin exagerar)
-- Respuestas concisas y directas (esto es WhatsApp, 2-4 líneas máximo)
-- Haz preguntas inteligentes para entender mejor la necesidad
-
-CÓMO CALIFICAR LEADS:
-Pregunta estratégicamente para obtener:
-1. ¿Qué necesitan? (tipo de proyecto/servicio)
-2. ¿Qué empresa son? (tamaño, industria)
-3. ¿Cuál es su timeline? (urgencia)
-4. ¿Han trabajado con consultoras antes?
-5. ¿Cuál es su presupuesto estimado?
-
-PRECIOS DE REFERENCIA (rangos generales):
-- Desarrollo de Software: $50K - $500K MXN (según complejidad)
-- Consultoría Cloud: $30K - $200K MXN (según alcance)
-- Auditorías de Ciberseguridad: $40K - $150K MXN
-- Proyectos de IA: $80K - $800K MXN
-- Retainers mensuales: $20K - $100K MXN
-
-CUÁNDO OFRECER AGENDAR CONSULTA:
-- El lead muestra interés genuino
-- Has entendido su necesidad básica
-- Tienen presupuesto/autoridad o son tomadores de decisión
-- El proyecto es viable para Karuna
-
-REGLAS IMPORTANTES:
-- NUNCA digas "te voy a pasar con alguien" o "contacta a..."
-- TÚ ERES el contacto, maneja la conversación
-- No prometas precios exactos, solo rangos
-- Si no sabes algo técnico específico, di "Un consultor especializado te dará detalles en la consulta"
-- Mantén el contexto de TODA la conversación
-- Sé proactivo: si detectas que divagan, redirige con una pregunta
-- Si es spam o no es un lead real, sé cortés pero breve
-
-Responde SIEMPRE en español, siendo útil, directo y enfocado en calificar y avanzar el lead.`
+        currentFlow: 'karuna',
+        systemPrompt: FLOW_PROMPTS.karuna.prompt,
+        customFlows: {}
       };
       fs.writeFileSync(this.configPath, JSON.stringify(defaultConfig, null, 2));
       console.log('✅ Archivo de configuración creado');
@@ -96,7 +37,7 @@ Responde SIEMPRE en español, siendo útil, directo y enfocado en calificar y av
       return JSON.parse(data);
     } catch (error) {
       console.error('Error al leer configuración:', error);
-      return { blacklist: [], systemPrompt: '' };
+      return { blacklist: [], systemPrompt: '', currentFlow: 'karuna', customFlows: {} };
     }
   }
 
@@ -153,6 +94,166 @@ Responde SIEMPRE en español, siendo útil, directo y enfocado en calificar y av
     this.saveConfig(config);
     console.log('✅ System prompt actualizado');
     return true;
+  }
+
+  // Flow methods
+  getCurrentFlow() {
+    const config = this.getConfig();
+    return config.currentFlow || 'karuna';
+  }
+
+  getAllFlows() {
+    const config = this.getConfig();
+    const customFlows = config.customFlows || {};
+    
+    // Merge default flows with custom flows
+    const allFlows = { ...FLOW_PROMPTS };
+    
+    Object.keys(customFlows).forEach(key => {
+      allFlows[key] = {
+        ...customFlows[key],
+        isDefault: false
+      };
+    });
+    
+    return allFlows;
+  }
+
+  getFlowData(flowId) {
+    const allFlows = this.getAllFlows();
+    return allFlows[flowId] || null;
+  }
+
+  setFlow(flowId) {
+    const config = this.getConfig();
+    const flowData = this.getFlowData(flowId);
+    
+    if (!flowData) {
+      console.error(`❌ Flow inválido: ${flowId}`);
+      return false;
+    }
+    
+    config.currentFlow = flowId;
+    config.systemPrompt = flowData.prompt;
+    this.saveConfig(config);
+    console.log(`✅ Flow cambiado a: ${flowId}`);
+    return true;
+  }
+
+  createCustomFlow(flowId, name, description, prompt, hasMenu, menuConfig) {
+    // Validate flowId doesn't exist in default flows
+    if (FLOW_PROMPTS[flowId]) {
+      console.error(`❌ No se puede crear flow con ID de flow predefinido: ${flowId}`);
+      return { success: false, message: 'El ID del flow ya existe en los flows predefinidos' };
+    }
+    
+    // Validate flowId format (alphanumeric and underscore only)
+    if (!/^[a-z0-9_]+$/.test(flowId)) {
+      return { success: false, message: 'El ID solo puede contener letras minúsculas, números y guiones bajos' };
+    }
+    
+    const config = this.getConfig();
+    if (!config.customFlows) {
+      config.customFlows = {};
+    }
+    
+    // Check if custom flow already exists
+    if (config.customFlows[flowId]) {
+      return { success: false, message: 'Ya existe un flow personalizado con ese ID' };
+    }
+    
+    config.customFlows[flowId] = {
+      name,
+      description,
+      prompt,
+      hasMenu: hasMenu || false,
+      menuConfig: menuConfig || null,
+      createdAt: new Date().toISOString()
+    };
+    
+    this.saveConfig(config);
+    console.log(`✅ Flow personalizado creado: ${flowId}`);
+    return { success: true, message: 'Flow creado exitosamente' };
+  }
+
+  updateCustomFlow(flowId, name, description, prompt, hasMenu, menuConfig) {
+    // Cannot update default flows
+    if (FLOW_PROMPTS[flowId]) {
+      return { success: false, message: 'No se pueden editar flows predefinidos' };
+    }
+    
+    const config = this.getConfig();
+    
+    if (!config.customFlows || !config.customFlows[flowId]) {
+      return { success: false, message: 'Flow personalizado no encontrado' };
+    }
+    
+    config.customFlows[flowId] = {
+      ...config.customFlows[flowId],
+      name,
+      description,
+      prompt,
+      hasMenu: hasMenu || false,
+      menuConfig: menuConfig || null,
+      updatedAt: new Date().toISOString()
+    };
+    
+    this.saveConfig(config);
+    
+    // If this is the current flow, update the system prompt
+    if (config.currentFlow === flowId) {
+      config.systemPrompt = prompt;
+      this.saveConfig(config);
+    }
+    
+    console.log(`✅ Flow personalizado actualizado: ${flowId}`);
+    return { success: true, message: 'Flow actualizado exitosamente' };
+  }
+
+  deleteCustomFlow(flowId) {
+    // Cannot delete default flows
+    if (FLOW_PROMPTS[flowId]) {
+      return { success: false, message: 'No se pueden eliminar flows predefinidos' };
+    }
+    
+    const config = this.getConfig();
+    
+    if (!config.customFlows || !config.customFlows[flowId]) {
+      return { success: false, message: 'Flow personalizado no encontrado' };
+    }
+    
+    // If this is the current flow, switch to karuna
+    if (config.currentFlow === flowId) {
+      config.currentFlow = 'karuna';
+      config.systemPrompt = FLOW_PROMPTS.karuna.prompt;
+    }
+    
+    delete config.customFlows[flowId];
+    this.saveConfig(config);
+    
+    console.log(`✅ Flow personalizado eliminado: ${flowId}`);
+    return { success: true, message: 'Flow eliminado exitosamente' };
+  }
+
+  getAvailableFlows() {
+    return Object.keys(this.getAllFlows());
+  }
+
+  // Menu handling for flows with submenus
+  shouldShowMenu(flowId, userId) {
+    const flowData = this.getFlowData(flowId);
+    if (!flowData || !flowData.hasMenu || !flowData.menuConfig) {
+      return false;
+    }
+    return true;
+  }
+
+  getMenuForFlow(flowId) {
+    const flowData = this.getFlowData(flowId);
+    if (!flowData || !flowData.hasMenu || !flowData.menuConfig) {
+      return null;
+    }
+    return flowData.menuConfig;
   }
 }
 
