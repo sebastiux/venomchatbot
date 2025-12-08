@@ -1,0 +1,19 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Karuna//WhatsApp Bot//ES
+CALSCALE:GREGORIAN
+METHOD:REQUEST
+BEGIN:VEVENT
+UID:karuna-1761622503398@karuna.es.com
+DTSTAMP:20251028T033503Z
+DTSTART:20251030T210000Z
+DTEND:20251030T220000Z
+SUMMARY:Consulta Karuna: Desarrollo de Software
+DESCRIPTION:Cliente: Carlos Test\nEmpresa: Test Company SA\nServicio: Desarrollo de Software\nEmail: carlos.test@ejemplo.com\n\n🎥 Link de videollamada: https://meet.google.com/hyq-iafe-ebz
+LOCATION:https://meet.google.com/hyq-iafe-ebz
+STATUS:CONFIRMED
+SEQUENCE:0
+ORGANIZER;CN=Karuna:mailto:csoh.sebastian@gmail.com
+ATTENDEE;CN=Carlos Test;RSVP=TRUE:mailto:carlos.test@ejemplo.com
+END:VEVENT
+END:VCALENDAR

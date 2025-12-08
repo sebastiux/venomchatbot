@@ -1,8 +1,11 @@
+// src/app.js
 import { createBot, createProvider, createFlow, addKeyword, utils, EVENTS } from '@builderbot/bot'
 import { MemoryDB as Database } from '@builderbot/bot'
 import { BaileysProvider as Provider } from '@builderbot/provider-baileys'
 import grokService from './services/GrokService.js'
 import configService from './services/ConfigService.js'
+import googleService from './services/GoogleService.js'
+import dateParserService from './services/DateParserService.js'
 import dotenv from 'dotenv'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -28,20 +31,86 @@ const scheduleFlow = addKeyword(utils.setEvent('SCHEDULE_FLOW'))
     .addAnswer('¿Cuál es tu email corporativo?', { capture: true }, async (ctx, { state }) => {
         await state.update({ email: ctx.body })
     })
-    .addAction(async (_, { flowDynamic, state }) => {
-        await flowDynamic([
-            '✅ *¡Registro Exitoso!*',
-            '',
-            `Nombre: ${state.get('name')}`,
-            `Empresa: ${state.get('company')}`,
-            `Servicio: ${state.get('service')}`,
-            `Email: ${state.get('email')}`,
-            '',
-            'Uno de nuestros consultores se pondrá en contacto contigo en las próximas 24 horas.',
-            '',
-            '¡Gracias por confiar en Karuna! 🙏'
-        ].join('\n'))
+    .addAnswer([
+        '📆 ¿Cuándo te gustaría la consulta?',
+        '',
+        'Puedes escribir como prefieras, por ejemplo:',
+        '• "Mañana a las 3 de la tarde"',
+        '• "El próximo lunes a las 10 am"',
+        '• "Pasado mañana a las 4 pm"',
+        '• "El viernes a las 2"'
+    ].join('\n'), 
+    { capture: true }, 
+    async (ctx, { state, flowDynamic, fallBack }) => {
+        await flowDynamic('⏳ Procesando fecha...');
+        
+        const resultado = await dateParserService.parsearFechaHora(ctx.body);
+        
+        if (!resultado) {
+            return fallBack('No pude entender la fecha. ¿Puedes intentar de nuevo? Por ejemplo: "mañana a las 3 pm"');
+        }
+        
+        await state.update({ 
+            fecha: resultado.fecha, 
+            hora: resultado.hora,
+            interpretacion: resultado.interpretacion
+        });
+        
+        await flowDynamic(`✅ Entendido: ${resultado.interpretacion}`);
     })
+    .addAnswer('¿Confirmas esta fecha y hora? (Sí/No)', 
+        { capture: true }, 
+        async (ctx, { state, fallBack }) => {
+            const respuesta = ctx.body.toLowerCase();
+            if (respuesta.includes('no')) {
+                await state.update({ fecha: null, hora: null });
+                return fallBack('Ok, ¿cuándo te gustaría entonces?');
+            }
+            if (!respuesta.includes('si') && !respuesta.includes('sí')) {
+                return fallBack('Por favor responde Sí o No');
+            }
+        }
+    )
+    .addAction(async (ctx, { flowDynamic, state }) => {
+        const datos = {
+            name: state.get('name'),
+            company: state.get('company'),
+            service: state.get('service'),
+            email: state.get('email'),
+            phone: ctx.from,
+            fecha: state.get('fecha'),
+            hora: state.get('hora')
+        };
+
+        await flowDynamic('📝 Registrando tu cita...');
+
+        const resultado = await googleService.registrarCita(datos);
+
+        if (resultado.success) {
+            await flowDynamic([
+                '✅ *¡Cita Agendada Exitosamente!*',
+                '',
+                `📋 *Detalles de tu consulta:*`,
+                `👤 ${datos.name}`,
+                `🏢 ${datos.company}`,
+                `💼 ${datos.service}`,
+                `📧 ${datos.email}`,
+                `📅 ${state.get('interpretacion')}`,
+                '',
+                '🎥 *Link de Google Meet:*',
+                resultado.meetLink,
+                '',
+                '📌 *Agregar a tu calendario:*',
+                resultado.htmlLink,
+                '',
+                '💡 *Tip:* Guarda este mensaje o toma captura',
+                '',
+                'Nos vemos en la consulta! 🙏'
+            ].join('\n'));
+        } else {
+            await flowDynamic('❌ Hubo un error al agendar. Por favor intenta de nuevo o contacta a soporte.');
+        }
+    });
 
 const welcomeFlow = addKeyword(['hola', 'hi', 'hello', 'buenos dias', 'buenas tardes', 'buenas noches'])
     .addAnswer('👋 ¡Hola! Bienvenido a *Karuna*')
@@ -61,7 +130,7 @@ const resetFlow = addKeyword(['reset', 'reiniciar', 'limpiar'])
     })
 
 const grokFlow = addKeyword(EVENTS.WELCOME)
-    .addAction(async (ctx, { flowDynamic, endFlow }) => {
+    .addAction(async (ctx, { flowDynamic, endFlow, gotoFlow }) => {
         // Ignorar mensajes de grupos
         if (ctx.from.includes('@g.us')) {
             console.log('⛔ Mensaje de grupo ignorado')
@@ -91,6 +160,13 @@ const grokFlow = addKeyword(EVENTS.WELCOME)
         
         try {
             const response = await grokService.getResponse(ctx.from, ctx.body)
+            
+            // Detectar si Grok quiere iniciar el agendamiento
+            if (response.includes('TRIGGER_SCHEDULE')) {
+                await flowDynamic('¡Perfecto! Vamos a agendar tu consulta.')
+                return gotoFlow(scheduleFlow)
+            }
+            
             await flowDynamic(response)
             console.log('  ✅ Respuesta enviada\n')
         } catch (error) {
@@ -376,6 +452,8 @@ const main = async () => {
     console.log('='.repeat(60))
     console.log(`🚀 KARUNA BOT iniciado en puerto ${PORT}`)
     console.log(`🤖 Grok: ${process.env.XAI_API_KEY ? '✅ OK' : '❌ FALTA'}`)
+    console.log(`📊 Google Sheets: ${process.env.GOOGLE_SHEET_ID ? '✅ OK' : '❌ FALTA'}`)
+    console.log(`🎥 Meet Link: ${process.env.MEET_LINK ? '✅ OK' : '❌ FALTA'}`)
     console.log(`🌐 Panel Admin: http://localhost:${PORT}/admin.html`)
     console.log('='.repeat(60))
 }

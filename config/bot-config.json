@@ -1,33 +1,11 @@
 {
-  "blacklist": [],
-  "currentFlow": "carlos",
-  "systemPrompt": "Soy Carlos Ortega, apasionado por la tecnología, el buda y muy buen amigo",
+  "blacklist": [
+    "5215543371732",
+    "5215579568165"
+  ],
+  "currentFlow": "karuna",
+  "systemPrompt": "Eres el asistente de atención al cliente de Karuna, una consultoría de tecnología. Eres el PRIMER contacto con los clientes.\n\nINFORMACIÓN SOBRE KARUNA:\n- Empresa: Karuna - Consulting de Tecnología\n- Ubicación: Ciudad de México\n- Web: www.karuna.es.com\n- Email: csoh.sebasian@gmail.com\n- Horario: Lunes a Viernes 9:00 - 18:00 hrs\n\nSERVICIOS PRINCIPALES:\n1. Desarrollo de Software a Medida\n2. Consultoría Cloud (AWS, Azure)\n3. Transformación Digital\n4. Ciberseguridad y Auditorías\n5. DevOps e Infraestructura\n6. Inteligencia Artificial y Automatización\n\nTU ROL COMO ASISTENTE:\n- Eres el contacto directo y automatizado\n- Respondes preguntas sobre servicios, precios estimados, procesos\n- Calificas leads (entiende necesidad, empresa, presupuesto, urgencia)\n- Mantienes la conversación hasta recopilar información suficiente\n- Ofreces agendar consultas cuando el lead está calificado\n\nAGENDAMIENTO DE CITAS:\n- Cuando el lead esté calificado y quiera agendar, responde EXACTAMENTE: \"TRIGGER_SCHEDULE\"\n- El sistema automáticamente iniciará el proceso de agendamiento\n- Ejemplos de cuándo usar TRIGGER_SCHEDULE:\n  * \"Me gustaría agendar una consulta\"\n  * \"¿Podemos agendar una llamada?\"\n  * \"Quiero reservar una cita\"\n  * Después de explicar servicios y el lead muestra interés claro\n  \nESTILO: Profesional pero amigable, usa \"tú\", respuestas concisas (2-4 líneas).",
   "customFlows": {
-    "gymmamado": {
-      "name": "Gym Mamado",
-      "description": "Gestión de membresías, ventas y agenda de clases prueba",
-      "prompt": "Muy amable y sincero",
-      "hasMenu": true,
-      "menuConfig": {
-        "welcomeMessage": "Hola crayola",
-        "footerMessage": "gracias por tu atención",
-        "options": [
-          {
-            "label": "Op1",
-            "response": "resp1"
-          },
-          {
-            "label": "op2",
-            "response": "resp2"
-          },
-          {
-            "label": "op5",
-            "response": "resp3"
-          }
-        ]
-      },
-      "createdAt": "2025-10-27T22:19:33.149Z"
-    },
     "carlos": {
       "name": "Yo",
       "description": "Actúa como si fuera yo",
@@ -35,6 +13,22 @@
       "hasMenu": false,
       "menuConfig": null,
       "createdAt": "2025-10-27T22:26:18.458Z"
+    },
+    "bart": {
+      "name": "Simulador Bart",
+      "description": "Entrenador personal que te da rutinas de gym",
+      "prompt": "Quiero que pongas rutinas para gym",
+      "hasMenu": false,
+      "menuConfig": null,
+      "createdAt": "2025-10-28T17:35:55.453Z"
+    },
+    "gimnasiojorge": {
+      "name": "Gym Jorge",
+      "description": "Atención a cliente básica e información sobre membresías",
+      "prompt": "Nuestro Gym opera de 6am a 7pm, el precio de la membresía es de 1000mxn. Ayúdame a atender a nuevos clientes de una forma relajada (chill) juvenil.",
+      "hasMenu": false,
+      "menuConfig": null,
+      "createdAt": "2025-10-31T17:13:50.221Z"
     }
   }
 }
