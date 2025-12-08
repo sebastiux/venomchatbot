@@ -3,6 +3,7 @@ import { MemoryDB as Database } from '@builderbot/bot'
 import { BaileysProvider as Provider } from '@builderbot/provider-baileys'
 import grokService from './services/GrokService.js'
 import configService from './services/ConfigService.js'
+import libraryService from './services/LibraryService.js'
 import dotenv from 'dotenv'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -349,6 +350,201 @@ const main = async () => {
             grokService.updateSystemPrompt(newPrompt)
         }
         
+        res.writeHead(result.success ? 200 : 400, { 'Content-Type': 'application/json' })
+        return res.end(JSON.stringify(result))
+    }))
+
+    // ============= LIBRARY ENDPOINTS =============
+
+    // Get institution context
+    adapterProvider.server.get('/api/library/institution-context', handleCtx(async (bot, req, res) => {
+        const context = libraryService.getInstitutionContext()
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        return res.end(JSON.stringify({ success: true, context }))
+    }))
+
+    // Update institution context
+    adapterProvider.server.post('/api/library/institution-context', handleCtx(async (bot, req, res) => {
+        const { context } = req.body
+
+        if (context === undefined) {
+            res.writeHead(400, { 'Content-Type': 'application/json' })
+            return res.end(JSON.stringify({ success: false, message: 'Contexto requerido' }))
+        }
+
+        libraryService.updateInstitutionContext(context)
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        return res.end(JSON.stringify({ success: true, message: 'Contexto de institucion actualizado' }))
+    }))
+
+    // Get all documents
+    adapterProvider.server.get('/api/library/documents', handleCtx(async (bot, req, res) => {
+        const documents = libraryService.getAllDocuments()
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        return res.end(JSON.stringify({ success: true, documents }))
+    }))
+
+    // Get a specific document
+    adapterProvider.server.get('/api/library/documents/:docId', handleCtx(async (bot, req, res) => {
+        const docId = req.params.docId
+        const document = libraryService.getDocument(docId)
+
+        if (document) {
+            res.writeHead(200, { 'Content-Type': 'application/json' })
+            return res.end(JSON.stringify({ success: true, document }))
+        } else {
+            res.writeHead(404, { 'Content-Type': 'application/json' })
+            return res.end(JSON.stringify({ success: false, message: 'Documento no encontrado' }))
+        }
+    }))
+
+    // Create a new document
+    adapterProvider.server.post('/api/library/documents', handleCtx(async (bot, req, res) => {
+        const { docId, title, content, description } = req.body
+
+        if (!docId || !title || !content) {
+            res.writeHead(400, { 'Content-Type': 'application/json' })
+            return res.end(JSON.stringify({
+                success: false,
+                message: 'docId, title y content son requeridos'
+            }))
+        }
+
+        const result = libraryService.createDocument(docId, title, content, description || '')
+        res.writeHead(result.success ? 200 : 400, { 'Content-Type': 'application/json' })
+        return res.end(JSON.stringify(result))
+    }))
+
+    // Update a document
+    adapterProvider.server.put('/api/library/documents/:docId', handleCtx(async (bot, req, res) => {
+        const docId = req.params.docId
+        const { title, content, description } = req.body
+
+        if (!title || !content) {
+            res.writeHead(400, { 'Content-Type': 'application/json' })
+            return res.end(JSON.stringify({
+                success: false,
+                message: 'title y content son requeridos'
+            }))
+        }
+
+        const result = libraryService.updateDocument(docId, title, content, description || '')
+        res.writeHead(result.success ? 200 : 400, { 'Content-Type': 'application/json' })
+        return res.end(JSON.stringify(result))
+    }))
+
+    // Delete a document
+    adapterProvider.server.delete('/api/library/documents/:docId', handleCtx(async (bot, req, res) => {
+        const docId = req.params.docId
+        const result = libraryService.deleteDocument(docId)
+        res.writeHead(result.success ? 200 : 400, { 'Content-Type': 'application/json' })
+        return res.end(JSON.stringify(result))
+    }))
+
+    // ============= CHAT SESSION ENDPOINTS =============
+
+    // Get all chat sessions
+    adapterProvider.server.get('/api/library/sessions', handleCtx(async (bot, req, res) => {
+        const sessions = libraryService.getAllSessions()
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        return res.end(JSON.stringify({ success: true, sessions }))
+    }))
+
+    // Get sessions for a specific document
+    adapterProvider.server.get('/api/library/documents/:docId/sessions', handleCtx(async (bot, req, res) => {
+        const docId = req.params.docId
+        const sessions = libraryService.getDocumentSessions(docId)
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        return res.end(JSON.stringify({ success: true, sessions }))
+    }))
+
+    // Get a specific session
+    adapterProvider.server.get('/api/library/sessions/:sessionId', handleCtx(async (bot, req, res) => {
+        const sessionId = req.params.sessionId
+        const session = libraryService.getSession(sessionId)
+
+        if (session) {
+            res.writeHead(200, { 'Content-Type': 'application/json' })
+            return res.end(JSON.stringify({ success: true, session }))
+        } else {
+            res.writeHead(404, { 'Content-Type': 'application/json' })
+            return res.end(JSON.stringify({ success: false, message: 'Sesion no encontrada' }))
+        }
+    }))
+
+    // Start a new chat session with a document
+    adapterProvider.server.post('/api/library/documents/:docId/chat/start', handleCtx(async (bot, req, res) => {
+        const docId = req.params.docId
+        const { userId, sessionName } = req.body
+
+        // Create persistent session first
+        const sessionResult = libraryService.createChatSession(docId, userId || 'web_user', sessionName)
+
+        if (!sessionResult.success) {
+            res.writeHead(400, { 'Content-Type': 'application/json' })
+            return res.end(JSON.stringify(sessionResult))
+        }
+
+        // Initialize the active chat session in GrokService
+        const chatResult = await grokService.startDocumentChat(sessionResult.sessionId, docId, userId || 'web_user')
+
+        res.writeHead(chatResult.success ? 200 : 400, { 'Content-Type': 'application/json' })
+        return res.end(JSON.stringify({
+            ...chatResult,
+            session: sessionResult.session
+        }))
+    }))
+
+    // Resume a previous chat session
+    adapterProvider.server.post('/api/library/sessions/:sessionId/resume', handleCtx(async (bot, req, res) => {
+        const sessionId = req.params.sessionId
+        const result = await grokService.resumeDocumentChat(sessionId)
+
+        if (result.success) {
+            const session = libraryService.getSession(sessionId)
+            res.writeHead(200, { 'Content-Type': 'application/json' })
+            return res.end(JSON.stringify({
+                ...result,
+                session
+            }))
+        } else {
+            res.writeHead(400, { 'Content-Type': 'application/json' })
+            return res.end(JSON.stringify(result))
+        }
+    }))
+
+    // Send a message in an active chat session
+    adapterProvider.server.post('/api/library/sessions/:sessionId/message', handleCtx(async (bot, req, res) => {
+        const sessionId = req.params.sessionId
+        const { message } = req.body
+
+        if (!message) {
+            res.writeHead(400, { 'Content-Type': 'application/json' })
+            return res.end(JSON.stringify({ success: false, message: 'Mensaje requerido' }))
+        }
+
+        const result = await grokService.getDocumentResponse(sessionId, message)
+        res.writeHead(result.success ? 200 : 400, { 'Content-Type': 'application/json' })
+        return res.end(JSON.stringify(result))
+    }))
+
+    // End a chat session
+    adapterProvider.server.post('/api/library/sessions/:sessionId/end', handleCtx(async (bot, req, res) => {
+        const sessionId = req.params.sessionId
+        const result = grokService.endDocumentChat(sessionId)
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        return res.end(JSON.stringify(result))
+    }))
+
+    // Delete a chat session
+    adapterProvider.server.delete('/api/library/sessions/:sessionId', handleCtx(async (bot, req, res) => {
+        const sessionId = req.params.sessionId
+
+        // End active session if exists
+        grokService.endDocumentChat(sessionId)
+
+        // Delete from persistent storage
+        const result = libraryService.deleteSession(sessionId)
         res.writeHead(result.success ? 200 : 400, { 'Content-Type': 'application/json' })
         return res.end(JSON.stringify(result))
     }))

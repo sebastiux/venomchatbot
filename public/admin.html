@@ -709,6 +709,335 @@
                 opacity: 1;
             }
         }
+
+        /* Navigation Tabs */
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e5e5e5;
+            padding-bottom: 10px;
+        }
+
+        .nav-tab {
+            padding: 12px 25px;
+            background: transparent;
+            border: none;
+            border-radius: 8px 8px 0 0;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .nav-tab:hover {
+            background: #f8f9fa;
+            color: #000;
+        }
+
+        .nav-tab.active {
+            background: #000;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Library Styles */
+        .library-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .document-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .document-item {
+            padding: 20px;
+            border: 2px solid #e5e5e5;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .document-item:hover {
+            border-color: #999;
+            background: #f8f9fa;
+        }
+
+        .document-item.selected {
+            border-color: #000;
+            background: #f8f9fa;
+        }
+
+        .document-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+
+        .document-item-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #000;
+        }
+
+        .document-item-desc {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+
+        .document-item-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 0.8rem;
+            color: #999;
+        }
+
+        .document-item-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .document-action-btn {
+            padding: 5px 12px;
+            font-size: 0.8rem;
+            background: white;
+            border: 1px solid #d5d5d5;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .document-action-btn:hover {
+            background: #f8f9fa;
+        }
+
+        .document-action-btn.danger {
+            color: #dc3545;
+            border-color: #dc3545;
+        }
+
+        .document-action-btn.danger:hover {
+            background: #dc3545;
+            color: white;
+        }
+
+        /* Chat Sessions */
+        .sessions-container {
+            margin-top: 20px;
+        }
+
+        .session-preview {
+            padding: 15px;
+            border: 1px solid #e5e5e5;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .session-preview:hover {
+            border-color: #000;
+            background: #f8f9fa;
+        }
+
+        .session-preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .session-preview-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .session-preview-date {
+            font-size: 0.8rem;
+            color: #999;
+        }
+
+        .session-preview-messages {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .session-preview-message {
+            padding: 5px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .session-preview-message:last-child {
+            border-bottom: none;
+        }
+
+        .session-preview-message.user {
+            color: #000;
+        }
+
+        .session-preview-message.assistant {
+            color: #666;
+            font-style: italic;
+        }
+
+        /* Chat Interface */
+        .chat-container {
+            display: none;
+            flex-direction: column;
+            height: 500px;
+            border: 1px solid #e5e5e5;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .chat-container.active {
+            display: flex;
+        }
+
+        .chat-header {
+            padding: 15px 20px;
+            background: #000;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-header-title {
+            font-weight: 600;
+        }
+
+        .chat-header-close {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .chat-message {
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-message.user {
+            align-items: flex-end;
+        }
+
+        .chat-message.assistant {
+            align-items: flex-start;
+        }
+
+        .chat-message-bubble {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .chat-message.user .chat-message-bubble {
+            background: #000;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .chat-message.assistant .chat-message-bubble {
+            background: white;
+            color: #333;
+            border: 1px solid #e5e5e5;
+            border-bottom-left-radius: 4px;
+        }
+
+        .chat-message-time {
+            font-size: 0.75rem;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        .chat-input-container {
+            padding: 15px 20px;
+            background: white;
+            border-top: 1px solid #e5e5e5;
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1px solid #d5d5d5;
+            border-radius: 25px;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .chat-input:focus {
+            border-color: #000;
+        }
+
+        .chat-send-btn {
+            padding: 12px 25px;
+            background: #000;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .chat-send-btn:hover {
+            background: #333;
+        }
+
+        .chat-send-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* Institution Context Card */
+        .institution-context-card {
+            grid-column: 1 / -1;
+        }
+
+        .full-width-card {
+            grid-column: 1 / -1;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .library-grid {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -720,6 +1049,14 @@
 
         <div id="alert" class="alert"></div>
 
+        <!-- Navigation Tabs -->
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="switchTab('admin')">Panel Principal</button>
+            <button class="nav-tab" onclick="switchTab('library')">Biblioteca de Maestros</button>
+        </div>
+
+        <!-- Admin Tab Content -->
+        <div id="admin-tab" class="tab-content active">
         <div class="dashboard">
             <!-- Card de Conexión -->
             <div class="card">
@@ -804,6 +1141,99 @@
                 <div id="prompt-alert" class="local-alert"></div>
             </div>
         </div>
+        </div><!-- End Admin Tab -->
+
+        <!-- Library Tab Content -->
+        <div id="library-tab" class="tab-content">
+            <div class="library-grid">
+                <!-- Institution Context Card -->
+                <div class="card institution-context-card">
+                    <h2>
+                        <div class="card-icon">I</div>
+                        Contexto de Institucion
+                    </h2>
+                    <p style="color: #666; margin-bottom: 15px; font-size: 0.95rem;">
+                        Define el contexto general de tu institucion. Este contexto se aplicara a todos los documentos de la biblioteca.
+                    </p>
+                    <textarea id="institution-context"
+                              placeholder="Ejemplo: Somos una institucion educativa enfocada en tecnologia. Nuestros valores son..."></textarea>
+                    <button class="save-btn" onclick="saveInstitutionContext()">Guardar Contexto de Institucion</button>
+                    <div id="institution-context-alert" class="local-alert"></div>
+                </div>
+
+                <!-- Documents Card -->
+                <div class="card">
+                    <h2>
+                        <div class="card-icon">D</div>
+                        Documentos de la Biblioteca
+                    </h2>
+                    <p style="color: #666; margin-bottom: 15px; font-size: 0.95rem;">
+                        Documentos que los maestros pueden usar como contexto para los chats
+                    </p>
+
+                    <button onclick="openDocumentModal()" style="width: 100%; margin-bottom: 20px;">
+                        Agregar Documento
+                    </button>
+
+                    <div class="document-list" id="document-list">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">--</div>
+                            <p>No hay documentos en la biblioteca</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chat Sessions / Preview Card -->
+                <div class="card">
+                    <h2>
+                        <div class="card-icon">H</div>
+                        Historial de Chats
+                    </h2>
+                    <p style="color: #666; margin-bottom: 15px; font-size: 0.95rem;">
+                        Conversaciones anteriores basadas en documentos
+                    </p>
+
+                    <div id="sessions-list" class="sessions-container">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">--</div>
+                            <p>No hay chats previos</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Chat Card -->
+                <div class="card full-width-card">
+                    <h2>
+                        <div class="card-icon">C</div>
+                        Chat con Documento
+                    </h2>
+
+                    <div id="chat-placeholder" style="text-align: center; padding: 40px; color: #666;">
+                        <p>Selecciona un documento y haz clic en "Iniciar Chat" para comenzar una conversacion con el contexto del documento.</p>
+                    </div>
+
+                    <div id="chat-container" class="chat-container">
+                        <div class="chat-header">
+                            <span class="chat-header-title" id="chat-title">Chat</span>
+                            <button class="chat-header-close" onclick="closeChat()">&times;</button>
+                        </div>
+                        <div class="chat-messages" id="chat-messages">
+                            <!-- Messages will be added here -->
+                        </div>
+                        <div class="chat-input-container">
+                            <input type="text"
+                                   class="chat-input"
+                                   id="chat-input"
+                                   placeholder="Escribe tu mensaje..."
+                                   onkeypress="handleChatKeypress(event)">
+                            <button class="chat-send-btn" id="chat-send-btn" onclick="sendChatMessage()">
+                                Enviar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div><!-- End Library Tab -->
     </div>
 
     <!-- Modal para crear/editar flow -->
@@ -881,11 +1311,53 @@
         </div>
     </div>
 
+    <!-- Modal para crear/editar documento -->
+    <div id="document-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="document-modal-title">Agregar Documento</h2>
+                <span class="modal-close" onclick="closeDocumentModal()">&times;</span>
+            </div>
+
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="doc-id">ID del Documento (sin espacios, solo letras minusculas)</label>
+                    <input type="text" id="doc-id" placeholder="ej: guia_matematicas, manual_fisica" />
+                </div>
+
+                <div class="form-group">
+                    <label for="doc-title">Titulo del Documento</label>
+                    <input type="text" id="doc-title" placeholder="ej: Guia de Matematicas Basicas" />
+                </div>
+
+                <div class="form-group">
+                    <label for="doc-description">Descripcion breve (opcional)</label>
+                    <input type="text" id="doc-description" placeholder="ej: Material de apoyo para alumnos de primer ano" />
+                </div>
+
+                <div class="form-group">
+                    <label for="doc-content">Contenido del Documento</label>
+                    <textarea id="doc-content" style="min-height: 300px;" placeholder="Pega aqui el contenido del documento. Este texto sera usado como contexto para las conversaciones de IA..."></textarea>
+                </div>
+
+                <div class="modal-actions">
+                    <button onclick="closeDocumentModal()" class="btn-danger">Cancelar</button>
+                    <button onclick="saveDocument()" id="save-doc-btn">Guardar Documento</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API_BASE = 'http://localhost:3008';
         let pollingInterval;
         let editingFlowId = null;
         let menuOptionsCount = 0;
+
+        // Library variables
+        let editingDocId = null;
+        let activeSessionId = null;
+        let selectedDocId = null;
 
         // Connection Status Functions
         function startConnectionStatusPolling() {
@@ -1440,12 +1912,519 @@
             }
         });
 
+        // ============= TAB NAVIGATION =============
+
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+
+            // Load library data when switching to library tab
+            if (tabName === 'library') {
+                loadInstitutionContext();
+                loadDocuments();
+                loadAllSessions();
+            }
+        }
+
+        // ============= INSTITUTION CONTEXT =============
+
+        async function loadInstitutionContext() {
+            try {
+                const response = await fetch(`${API_BASE}/api/library/institution-context`);
+                const data = await response.json();
+                document.getElementById('institution-context').value = data.context || '';
+            } catch (error) {
+                console.error('Error al cargar contexto de institucion:', error);
+            }
+        }
+
+        async function saveInstitutionContext() {
+            const context = document.getElementById('institution-context').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/library/institution-context`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ context })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showInstitutionAlert('Contexto de institucion guardado', 'success');
+                } else {
+                    showInstitutionAlert(data.message || 'Error al guardar', 'error');
+                }
+            } catch (error) {
+                showInstitutionAlert('Error al guardar el contexto', 'error');
+                console.error(error);
+            }
+        }
+
+        function showInstitutionAlert(message, type) {
+            const alert = document.getElementById('institution-context-alert');
+            alert.textContent = message;
+            alert.className = `local-alert ${type} show`;
+            setTimeout(() => alert.classList.remove('show'), 5000);
+        }
+
+        // ============= DOCUMENTS =============
+
+        async function loadDocuments() {
+            try {
+                const response = await fetch(`${API_BASE}/api/library/documents`);
+                const data = await response.json();
+                const container = document.getElementById('document-list');
+
+                const documents = Object.values(data.documents || {});
+
+                if (documents.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">--</div>
+                            <p>No hay documentos en la biblioteca</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = documents.map(doc => `
+                    <div class="document-item ${selectedDocId === doc.id ? 'selected' : ''}"
+                         onclick="selectDocument('${doc.id}')">
+                        <div class="document-item-header">
+                            <div class="document-item-title">${doc.title}</div>
+                            <div class="document-item-actions" onclick="event.stopPropagation()">
+                                <button class="document-action-btn" onclick="startChat('${doc.id}')">
+                                    Iniciar Chat
+                                </button>
+                                <button class="document-action-btn" onclick="editDocument('${doc.id}')">
+                                    Editar
+                                </button>
+                                <button class="document-action-btn danger" onclick="deleteDocument('${doc.id}')">
+                                    Eliminar
+                                </button>
+                            </div>
+                        </div>
+                        ${doc.description ? `<div class="document-item-desc">${doc.description}</div>` : ''}
+                        <div class="document-item-meta">
+                            <span>ID: ${doc.id}</span>
+                            <span>Actualizado: ${formatDate(doc.updatedAt)}</span>
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                console.error('Error al cargar documentos:', error);
+            }
+        }
+
+        function selectDocument(docId) {
+            selectedDocId = docId;
+            loadDocuments();
+            loadDocumentSessions(docId);
+        }
+
+        function openDocumentModal() {
+            editingDocId = null;
+            document.getElementById('document-modal-title').textContent = 'Agregar Documento';
+            document.getElementById('doc-id').value = '';
+            document.getElementById('doc-id').disabled = false;
+            document.getElementById('doc-title').value = '';
+            document.getElementById('doc-description').value = '';
+            document.getElementById('doc-content').value = '';
+            document.getElementById('save-doc-btn').textContent = 'Guardar Documento';
+            document.getElementById('document-modal').classList.add('show');
+        }
+
+        async function editDocument(docId) {
+            try {
+                const response = await fetch(`${API_BASE}/api/library/documents/${docId}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    editingDocId = docId;
+                    document.getElementById('document-modal-title').textContent = 'Editar Documento';
+                    document.getElementById('doc-id').value = docId;
+                    document.getElementById('doc-id').disabled = true;
+                    document.getElementById('doc-title').value = data.document.title;
+                    document.getElementById('doc-description').value = data.document.description || '';
+                    document.getElementById('doc-content').value = data.document.content;
+                    document.getElementById('save-doc-btn').textContent = 'Actualizar Documento';
+                    document.getElementById('document-modal').classList.add('show');
+                }
+            } catch (error) {
+                showAlert('Error al cargar el documento', 'error');
+                console.error(error);
+            }
+        }
+
+        async function saveDocument() {
+            const docId = document.getElementById('doc-id').value.trim().toLowerCase();
+            const title = document.getElementById('doc-title').value.trim();
+            const description = document.getElementById('doc-description').value.trim();
+            const content = document.getElementById('doc-content').value.trim();
+
+            if (!docId || !title || !content) {
+                showAlert('Por favor completa todos los campos requeridos', 'error');
+                return;
+            }
+
+            try {
+                let response;
+
+                if (editingDocId) {
+                    response = await fetch(`${API_BASE}/api/library/documents/${editingDocId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ title, description, content })
+                    });
+                } else {
+                    response = await fetch(`${API_BASE}/api/library/documents`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ docId, title, description, content })
+                    });
+                }
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    closeDocumentModal();
+                    loadDocuments();
+                } else {
+                    showAlert(data.message || 'Error al guardar el documento', 'error');
+                }
+            } catch (error) {
+                showAlert('Error al guardar el documento', 'error');
+                console.error(error);
+            }
+        }
+
+        async function deleteDocument(docId) {
+            if (!confirm('Esto eliminara el documento y todos los chats asociados. Continuar?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/library/documents/${docId}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert('Documento eliminado', 'success');
+                    if (selectedDocId === docId) {
+                        selectedDocId = null;
+                    }
+                    loadDocuments();
+                    loadAllSessions();
+                } else {
+                    showAlert(data.message || 'Error al eliminar', 'error');
+                }
+            } catch (error) {
+                showAlert('Error al eliminar el documento', 'error');
+                console.error(error);
+            }
+        }
+
+        function closeDocumentModal() {
+            document.getElementById('document-modal').classList.remove('show');
+            editingDocId = null;
+        }
+
+        // ============= CHAT SESSIONS =============
+
+        async function loadAllSessions() {
+            try {
+                const response = await fetch(`${API_BASE}/api/library/sessions`);
+                const data = await response.json();
+                renderSessions(data.sessions || []);
+            } catch (error) {
+                console.error('Error al cargar sesiones:', error);
+            }
+        }
+
+        async function loadDocumentSessions(docId) {
+            try {
+                const response = await fetch(`${API_BASE}/api/library/documents/${docId}/sessions`);
+                const data = await response.json();
+                renderSessions(data.sessions || []);
+            } catch (error) {
+                console.error('Error al cargar sesiones del documento:', error);
+            }
+        }
+
+        function renderSessions(sessions) {
+            const container = document.getElementById('sessions-list');
+
+            if (sessions.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">--</div>
+                        <p>No hay chats previos</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = sessions.map(session => {
+                const previewMessages = (session.preview || []).slice(-2);
+                const previewHTML = previewMessages.map(msg => `
+                    <div class="session-preview-message ${msg.role}">
+                        <strong>${msg.role === 'user' ? 'Tu' : 'Bot'}:</strong>
+                        ${truncateText(msg.content, 60)}
+                    </div>
+                `).join('');
+
+                return `
+                    <div class="session-preview" onclick="resumeChat('${session.id}')">
+                        <div class="session-preview-header">
+                            <span class="session-preview-title">${session.name || session.documentTitle}</span>
+                            <span class="session-preview-date">${formatDate(session.updatedAt)}</span>
+                        </div>
+                        <div style="font-size: 0.8rem; color: #999; margin-bottom: 8px;">
+                            Documento: ${session.documentTitle} | ${session.messageCount || 0} mensajes
+                        </div>
+                        <div class="session-preview-messages">
+                            ${previewHTML || '<span style="color: #999;">Sin mensajes</span>'}
+                        </div>
+                        <div style="margin-top: 10px; display: flex; gap: 8px;">
+                            <button class="document-action-btn" onclick="event.stopPropagation(); resumeChat('${session.id}')">
+                                Continuar
+                            </button>
+                            <button class="document-action-btn danger" onclick="event.stopPropagation(); deleteSession('${session.id}')">
+                                Eliminar
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ============= CHAT INTERFACE =============
+
+        async function startChat(docId) {
+            try {
+                const response = await fetch(`${API_BASE}/api/library/documents/${docId}/chat/start`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: 'web_admin' })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    activeSessionId = data.sessionId;
+                    openChatInterface(data.documentTitle, []);
+                    showAlert(`Chat iniciado con "${data.documentTitle}"`, 'success');
+                    loadAllSessions();
+                } else {
+                    showAlert(data.message || 'Error al iniciar chat', 'error');
+                }
+            } catch (error) {
+                showAlert('Error al iniciar el chat', 'error');
+                console.error(error);
+            }
+        }
+
+        async function resumeChat(sessionId) {
+            try {
+                const response = await fetch(`${API_BASE}/api/library/sessions/${sessionId}/resume`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    activeSessionId = sessionId;
+                    const messages = data.session ? data.session.messages : [];
+                    openChatInterface(data.documentTitle, messages);
+                } else {
+                    showAlert(data.message || 'Error al reanudar chat', 'error');
+                }
+            } catch (error) {
+                showAlert('Error al reanudar el chat', 'error');
+                console.error(error);
+            }
+        }
+
+        function openChatInterface(title, messages) {
+            document.getElementById('chat-placeholder').style.display = 'none';
+            document.getElementById('chat-container').classList.add('active');
+            document.getElementById('chat-title').textContent = `Chat: ${title}`;
+
+            const messagesContainer = document.getElementById('chat-messages');
+            messagesContainer.innerHTML = '';
+
+            if (messages && messages.length > 0) {
+                messages.forEach(msg => {
+                    addMessageToChat(msg.role, msg.content, msg.timestamp);
+                });
+            }
+
+            document.getElementById('chat-input').focus();
+            scrollChatToBottom();
+        }
+
+        function closeChat() {
+            if (activeSessionId) {
+                fetch(`${API_BASE}/api/library/sessions/${activeSessionId}/end`, {
+                    method: 'POST'
+                }).catch(console.error);
+            }
+
+            activeSessionId = null;
+            document.getElementById('chat-container').classList.remove('active');
+            document.getElementById('chat-placeholder').style.display = 'block';
+            document.getElementById('chat-messages').innerHTML = '';
+        }
+
+        function addMessageToChat(role, content, timestamp) {
+            const messagesContainer = document.getElementById('chat-messages');
+            const time = timestamp ? formatTime(timestamp) : formatTime(new Date().toISOString());
+
+            const messageHTML = `
+                <div class="chat-message ${role}">
+                    <div class="chat-message-bubble">${escapeHtml(content)}</div>
+                    <div class="chat-message-time">${time}</div>
+                </div>
+            `;
+
+            messagesContainer.insertAdjacentHTML('beforeend', messageHTML);
+            scrollChatToBottom();
+        }
+
+        async function sendChatMessage() {
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+
+            if (!message || !activeSessionId) return;
+
+            const sendBtn = document.getElementById('chat-send-btn');
+            sendBtn.disabled = true;
+            input.value = '';
+
+            // Add user message to UI immediately
+            addMessageToChat('user', message);
+
+            try {
+                const response = await fetch(`${API_BASE}/api/library/sessions/${activeSessionId}/message`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    addMessageToChat('assistant', data.response);
+                } else {
+                    addMessageToChat('assistant', 'Error: ' + (data.message || 'No se pudo obtener respuesta'));
+                }
+            } catch (error) {
+                addMessageToChat('assistant', 'Error: No se pudo conectar con el servidor');
+                console.error(error);
+            }
+
+            sendBtn.disabled = false;
+            input.focus();
+        }
+
+        function handleChatKeypress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendChatMessage();
+            }
+        }
+
+        async function deleteSession(sessionId) {
+            if (!confirm('Eliminar este chat?')) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/library/sessions/${sessionId}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert('Chat eliminado', 'success');
+                    if (activeSessionId === sessionId) {
+                        closeChat();
+                    }
+                    loadAllSessions();
+                } else {
+                    showAlert(data.message || 'Error al eliminar', 'error');
+                }
+            } catch (error) {
+                showAlert('Error al eliminar el chat', 'error');
+                console.error(error);
+            }
+        }
+
+        function scrollChatToBottom() {
+            const container = document.getElementById('chat-messages');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // ============= UTILITY FUNCTIONS =============
+
+        function formatDate(isoString) {
+            if (!isoString) return '';
+            const date = new Date(isoString);
+            return date.toLocaleDateString('es-MX', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
+            });
+        }
+
+        function formatTime(isoString) {
+            if (!isoString) return '';
+            const date = new Date(isoString);
+            return date.toLocaleTimeString('es-MX', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function truncateText(text, maxLength) {
+            if (!text) return '';
+            if (text.length <= maxLength) return text;
+            return text.substring(0, maxLength) + '...';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
         // Initialize
         window.addEventListener('DOMContentLoaded', () => {
             startConnectionStatusPolling();
             loadBlacklist();
             loadSystemPrompt();
             loadFlows();
+        });
+
+        // Close modals on click outside
+        document.addEventListener('click', (e) => {
+            if (e.target === document.getElementById('document-modal')) {
+                closeDocumentModal();
+            }
         });
     </script>
 </body>
