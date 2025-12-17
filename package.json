@@ -7,7 +7,9 @@
   "scripts": {
     "lint": "eslint . --no-ignore",
     "dev": "npm run lint && nodemon ./src/app.js",
-    "start": "node ./src/app.js"
+    "start": "node ./src/app.js",
+    "clean": "node ./scripts/clean-sessions.js",
+    "reset": "npm run clean && npm start"
   },
   "keywords": [
     "whatsapp",

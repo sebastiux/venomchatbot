@@ -204,8 +204,10 @@ const main = async () => {
     });
 
     adapterProvider.on('auth_failure', () => {
-        connectionStatus = 'disconnected';
-        console.log('❌ Fallo de autenticación');
+        connectionStatus = 'auth_failure';
+        console.log('\n❌ Fallo de autenticación');
+        console.log('💡 Ejecuta: npm run clean');
+        console.log('   Esto limpiará las sesiones corruptas y generará un nuevo QR\n');
     });
 
     const { handleCtx, httpServer } = await createBot({

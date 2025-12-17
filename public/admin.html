@@ -938,6 +938,20 @@
                         <p style="margin-top: 20px; color: #666;">Conectando con WhatsApp...</p>
                     `;
                     break;
+                case 'auth_failure':
+                    badgeHTML = '<span class="status-badge status-disconnected">Error de Autenticación</span>';
+                    displayHTML = `
+                        <div class="status-icon" style="color: #dc3545;">⚠</div>
+                        <h3 style="color: #dc3545; margin-bottom: 10px;">Error de Autenticación</h3>
+                        <p style="color: #666; margin-bottom: 15px;">
+                            Las sesiones están corruptas o expiradas.
+                        </p>
+                        <p style="color: #333; font-weight: 600; background: #f8f9fa; padding: 15px; border-radius: 8px; font-family: monospace;">
+                            Ejecuta: <code style="background: #000; color: #fff; padding: 4px 8px; border-radius: 4px;">npm run clean</code><br>
+                            <span style="font-weight: normal; font-size: 0.9rem; color: #666;">Esto limpiará las sesiones y generará un nuevo QR</span>
+                        </p>
+                    `;
+                    break;
                 default:
                     badgeHTML = '<span class="status-badge status-disconnected">Desconectado</span>';
                     displayHTML = `
