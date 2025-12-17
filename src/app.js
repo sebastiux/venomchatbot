@@ -187,14 +187,17 @@ const main = async () => {
         grokFlow
     ])
     
-    const adapterProvider = createProvider(Provider)
+    const adapterProvider = createProvider(Provider, {
+        printQRInTerminal: true,  // Mostrar QR en consola también
+    })
     const adapterDB = new Database()
 
     // Capturar eventos del proveedor
     adapterProvider.on('qr', (qr) => {
         currentQR = qr;
         connectionStatus = 'qr';
-        console.log('📱 Nuevo QR generado - Disponible en el panel web');
+        console.log('\n📱 Nuevo QR generado - Disponible en el panel web');
+        console.log('   También puedes escanearlo desde la consola arriba ⬆️\n');
     });
 
     adapterProvider.on('ready', () => {
@@ -203,11 +206,17 @@ const main = async () => {
         console.log('✅ WhatsApp conectado exitosamente');
     });
 
-    adapterProvider.on('auth_failure', () => {
+    adapterProvider.on('auth_failure', (error) => {
         connectionStatus = 'auth_failure';
         console.log('\n❌ Fallo de autenticación');
+        console.log('   Error:', error || 'Sin detalles');
         console.log('💡 Ejecuta: npm run clean');
         console.log('   Esto limpiará las sesiones corruptas y generará un nuevo QR\n');
+    });
+
+    // Evento de conexión para más detalles
+    adapterProvider.on('connection.update', (update) => {
+        console.log('🔄 Estado de conexión:', JSON.stringify(update));
     });
 
     const { handleCtx, httpServer } = await createBot({
