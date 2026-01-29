@@ -1,65 +1,39 @@
-FROM node:21-alpine3.18 as builder
+# Dockerfile optimized for Railway deployment with Meta WhatsApp API
+FROM node:20-alpine
 
+# Install dependencies for native modules
 RUN apk add --no-cache \
-      git \
-      python3 \
-      make \
-      g++ \
-      chromium \
-      nss \
-      freetype \
-      harfbuzz \
-      ca-certificates \
-      libpq-dev \
-      ttf-freefont \
-      udev
-
-RUN corepack enable && corepack prepare pnpm@latest --activate
-ENV PNPM_HOME=/usr/local/bin
-
-RUN addgroup -S pptruser && adduser -S -G pptruser pptruser
+    python3 \
+    make \
+    g++ \
+    ca-certificates
 
 WORKDIR /app
-RUN chown -R pptruser:pptruser /app
 
-USER pptruser
+# Copy package files
+COPY package*.json ./
 
-COPY package.json *-lock.* ./
+# Install production dependencies only
+RUN npm ci --only=production
 
-RUN pnpm install --production=false
-
+# Copy application code
 COPY . .
 
-FROM node:21-alpine3.18
+# Create non-root user for security
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN chown -R appuser:appgroup /app
+USER appuser
 
-RUN apk add --no-cache \
-      chromium \
-      nss \
-      freetype \
-      harfbuzz \
-      ca-certificates \
-      libpq-dev \
-      ttf-freefont \
-      udev
+# Environment variables (set by Railway)
+ENV NODE_ENV=production
+ENV PORT=3008
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
-ENV PNPM_HOME=/usr/local/bin
-
-RUN addgroup -S pptruser && adduser -S -G pptruser pptruser
-
-WORKDIR /app
-
-COPY --from=builder /app ./
-COPY --from=builder /app/package.json /app/pnpm-lock.yaml ./
-
-RUN chown -R pptruser:pptruser /app
-
-USER pptruser
-
-ARG PORT
-ENV PORT $PORT
+# Expose the port
 EXPOSE $PORT
 
-RUN pnpm install --production
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:$PORT/health || exit 1
 
+# Start the application
 CMD ["npm", "start"]

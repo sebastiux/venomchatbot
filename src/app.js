@@ -1,7 +1,7 @@
 // src/app.js
 import { createBot, createProvider, createFlow, addKeyword, utils, EVENTS } from '@builderbot/bot'
 import { MemoryDB as Database } from '@builderbot/bot'
-import { BaileysProvider as Provider } from '@builderbot/provider-baileys'
+import { MetaProvider as Provider } from '@builderbot/provider-meta'
 import grokService from './services/GrokService.js'
 import configService from './services/ConfigService.js'
 import googleService from './services/GoogleService.js'
@@ -16,6 +16,12 @@ dotenv.config()
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const PORT = process.env.PORT ?? 3008
+
+// Meta API Configuration
+const META_JWT_TOKEN = process.env.META_JWT_TOKEN
+const META_NUMBER_ID = process.env.META_NUMBER_ID
+const META_VERIFY_TOKEN = process.env.META_VERIFY_TOKEN
+const META_VERSION = process.env.META_VERSION || 'v21.0'
 
 const scheduleFlow = addKeyword(utils.setEvent('SCHEDULE_FLOW'))
     .addAnswer('📅 *Agendamiento de Consulta Gratuita*')
@@ -175,49 +181,59 @@ const grokFlow = addKeyword(EVENTS.WELCOME)
         }
     })
 
-// Estado global para QR y conexión
-let currentQR = null;
-let connectionStatus = 'disconnected'; // disconnected, qr, connecting, connected
+// Estado global para conexión (Meta API no usa QR)
+let connectionStatus = 'disconnected'; // disconnected, connecting, connected, error
+let lastError = null;
 
 const main = async () => {
+    // Validate Meta API configuration
+    if (!META_JWT_TOKEN || !META_NUMBER_ID || !META_VERIFY_TOKEN) {
+        console.error('❌ ERROR: Meta API credentials are required!')
+        console.error('   Please set the following environment variables:')
+        console.error('   - META_JWT_TOKEN (Access Token from Meta Developer Portal)')
+        console.error('   - META_NUMBER_ID (WhatsApp Phone Number ID)')
+        console.error('   - META_VERIFY_TOKEN (Your custom webhook verify token)')
+        process.exit(1)
+    }
+
     const adapterFlow = createFlow([
         welcomeFlow,
         resetFlow,
         scheduleFlow,
         grokFlow
     ])
-    
+
     const adapterProvider = createProvider(Provider, {
-        printQRInTerminal: true,  // Mostrar QR en consola también
+        jwtToken: META_JWT_TOKEN,
+        numberId: META_NUMBER_ID,
+        verifyToken: META_VERIFY_TOKEN,
+        version: META_VERSION,
     })
     const adapterDB = new Database()
 
-    // Capturar eventos del proveedor
-    adapterProvider.on('qr', (qr) => {
-        currentQR = qr;
-        connectionStatus = 'qr';
-        console.log('\n📱 Nuevo QR generado - Disponible en el panel web');
-        console.log('   También puedes escanearlo desde la consola arriba ⬆️\n');
-    });
-
+    // Meta provider events
     adapterProvider.on('ready', () => {
-        currentQR = null;
         connectionStatus = 'connected';
-        console.log('✅ WhatsApp conectado exitosamente');
+        lastError = null;
+        console.log('✅ Meta WhatsApp API conectado exitosamente');
     });
 
     adapterProvider.on('auth_failure', (error) => {
-        connectionStatus = 'auth_failure';
-        console.log('\n❌ Fallo de autenticación');
-        console.log('   Error:', error || 'Sin detalles');
-        console.log('💡 Ejecuta: npm run clean');
-        console.log('   Esto limpiará las sesiones corruptas y generará un nuevo QR\n');
+        connectionStatus = 'error';
+        lastError = error?.message || 'Authentication failed';
+        console.log('\n❌ Error de autenticación Meta API');
+        console.log('   Error:', lastError);
+        console.log('💡 Verifica tus credenciales en el panel de Meta Developer\n');
     });
 
-    // Evento de conexión para más detalles
-    adapterProvider.on('connection.update', (update) => {
-        console.log('🔄 Estado de conexión:', JSON.stringify(update));
+    adapterProvider.on('error', (error) => {
+        connectionStatus = 'error';
+        lastError = error?.message || 'Unknown error';
+        console.log('❌ Error en Meta API:', lastError);
     });
+
+    // Set initial status to connecting
+    connectionStatus = 'connecting';
 
     const { handleCtx, httpServer } = await createBot({
         flow: adapterFlow,
@@ -236,12 +252,24 @@ const main = async () => {
 
     // ============= API ENDPOINTS =============
 
-    // Endpoint para obtener QR y estado de conexión
+    // Endpoint para obtener estado de conexión (Meta API - no usa QR)
     adapterProvider.server.get('/api/connection-status', handleCtx(async (bot, req, res) => {
         res.writeHead(200, { 'Content-Type': 'application/json' })
-        return res.end(JSON.stringify({ 
+        return res.end(JSON.stringify({
             status: connectionStatus,
-            qr: currentQR,
+            provider: 'meta',
+            error: lastError,
+            numberId: META_NUMBER_ID ? `...${META_NUMBER_ID.slice(-4)}` : null,
+            timestamp: new Date().toISOString()
+        }))
+    }))
+
+    // Health check endpoint for Railway
+    adapterProvider.server.get('/health', handleCtx(async (bot, req, res) => {
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        return res.end(JSON.stringify({
+            status: 'ok',
+            uptime: process.uptime(),
             timestamp: new Date().toISOString()
         }))
     }))
@@ -459,14 +487,27 @@ const main = async () => {
     }))
 
     httpServer(+PORT)
-    
+
+    // Mark as connected after successful startup
+    connectionStatus = 'connected';
+
     console.log('='.repeat(60))
     console.log(`🚀 KARUNA BOT iniciado en puerto ${PORT}`)
+    console.log(`📱 Provider: Meta WhatsApp Business API (${META_VERSION})`)
+    console.log(`📞 Number ID: ...${META_NUMBER_ID?.slice(-4) || 'NOT SET'}`)
     console.log(`🤖 Grok: ${process.env.XAI_API_KEY ? '✅ OK' : '❌ FALTA'}`)
     console.log(`📊 Google Sheets: ${process.env.GOOGLE_SHEET_ID ? '✅ OK' : '❌ FALTA'}`)
     console.log(`🎥 Meet Link: ${process.env.MEET_LINK ? '✅ OK' : '❌ FALTA'}`)
     console.log(`🌐 Panel Admin: http://localhost:${PORT}/admin.html`)
+    console.log(`🔗 Webhook URL: https://YOUR_DOMAIN/webhook`)
     console.log('='.repeat(60))
+    console.log('')
+    console.log('📋 Meta WhatsApp Setup Instructions:')
+    console.log('   1. Go to Meta Developer Portal')
+    console.log('   2. Configure webhook URL: https://YOUR_RAILWAY_URL/webhook')
+    console.log('   3. Set Verify Token to match META_VERIFY_TOKEN env var')
+    console.log('   4. Subscribe to: messages, message_deliveries, message_reads')
+    console.log('')
 }
 
 main().catch(console.error)

@@ -725,7 +725,7 @@
             <div class="card">
                 <h2>
                     <div class="card-icon">W</div>
-                    Conexión WhatsApp
+                    Meta WhatsApp API
                 </h2>
                 <div id="connection-status-badge" style="margin-bottom: 20px;">
                     <span class="status-badge status-connecting">Cargando...</span>
@@ -882,7 +882,7 @@
     </div>
 
     <script>
-        const API_BASE = 'http://localhost:3008';
+        const API_BASE = window.location.origin;
         let pollingInterval;
         let editingFlowId = null;
         let menuOptionsCount = 0;
@@ -906,63 +906,64 @@
         function updateConnectionDisplay(data) {
             const statusBadge = document.getElementById('connection-status-badge');
             const qrDisplay = document.getElementById('qr-display');
-            
+
             let badgeHTML = '';
             let displayHTML = '';
-            
+            const isMeta = data.provider === 'meta';
+
             switch(data.status) {
                 case 'connected':
                     badgeHTML = '<span class="status-badge status-connected">Conectado</span>';
                     displayHTML = `
-                        <div class="status-icon">●</div>
-                        <h3 style="color: #000; margin-bottom: 10px;">WhatsApp Conectado</h3>
-                        <p style="color: #666;">
+                        <div class="status-icon" style="color: #28a745;">●</div>
+                        <h3 style="color: #000; margin-bottom: 10px;">WhatsApp Business API Conectado</h3>
+                        <p style="color: #666; margin-bottom: 10px;">
                             El bot está activo y listo para recibir mensajes.
                         </p>
-                    `;
-                    break;
-                case 'qr':
-                    badgeHTML = '<span class="status-badge status-connecting">Esperando Escaneo</span>';
-                    displayHTML = `
-                        <h3 style="color: #000; margin-bottom: 15px;">Escanea el código QR</h3>
-                        <img src="${data.qr}" alt="QR Code" />
-                        <p style="color: #666;">
-                            Abre WhatsApp en tu teléfono y escanea este código
-                        </p>
+                        ${isMeta && data.numberId ? `
+                            <p style="color: #333; font-size: 0.9rem; background: #f8f9fa; padding: 10px 15px; border-radius: 8px;">
+                                <strong>Provider:</strong> Meta WhatsApp Business API<br>
+                                <strong>Number ID:</strong> ${data.numberId}
+                            </p>
+                        ` : ''}
                     `;
                     break;
                 case 'connecting':
                     badgeHTML = '<span class="status-badge status-connecting">Conectando</span>';
                     displayHTML = `
                         <div class="loading-spinner"></div>
-                        <p style="margin-top: 20px; color: #666;">Conectando con WhatsApp...</p>
+                        <p style="margin-top: 20px; color: #666;">Conectando con Meta WhatsApp API...</p>
                     `;
                     break;
-                case 'auth_failure':
-                    badgeHTML = '<span class="status-badge status-disconnected">Error de Autenticación</span>';
+                case 'error':
+                    badgeHTML = '<span class="status-badge status-disconnected">Error</span>';
                     displayHTML = `
                         <div class="status-icon" style="color: #dc3545;">⚠</div>
-                        <h3 style="color: #dc3545; margin-bottom: 10px;">Error de Autenticación</h3>
+                        <h3 style="color: #dc3545; margin-bottom: 10px;">Error de Conexión</h3>
                         <p style="color: #666; margin-bottom: 15px;">
-                            Las sesiones están corruptas o expiradas.
+                            ${data.error || 'Error desconocido en la conexión con Meta API.'}
                         </p>
-                        <p style="color: #333; font-weight: 600; background: #f8f9fa; padding: 15px; border-radius: 8px; font-family: monospace;">
-                            Ejecuta: <code style="background: #000; color: #fff; padding: 4px 8px; border-radius: 4px;">npm run clean</code><br>
-                            <span style="font-weight: normal; font-size: 0.9rem; color: #666;">Esto limpiará las sesiones y generará un nuevo QR</span>
-                        </p>
+                        <div style="color: #333; background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: left;">
+                            <strong>Verifica:</strong>
+                            <ul style="margin: 10px 0 0 20px; color: #666;">
+                                <li>META_JWT_TOKEN está configurado correctamente</li>
+                                <li>META_NUMBER_ID es válido</li>
+                                <li>El webhook está configurado en Meta Developer Portal</li>
+                            </ul>
+                        </div>
                     `;
                     break;
                 default:
                     badgeHTML = '<span class="status-badge status-disconnected">Desconectado</span>';
                     displayHTML = `
                         <div class="status-icon">○</div>
-                        <h3 style="color: #000; margin-bottom: 10px;">WhatsApp Desconectado</h3>
+                        <h3 style="color: #000; margin-bottom: 10px;">Bot Desconectado</h3>
                         <p style="color: #666;">
-                            El bot no está conectado. Reinicia el servidor.
+                            El bot no está conectado. Verifica la configuración del servidor.
                         </p>
                     `;
             }
-            
+
             statusBadge.innerHTML = badgeHTML;
             qrDisplay.innerHTML = displayHTML;
         }

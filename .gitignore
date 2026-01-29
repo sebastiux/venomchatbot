@@ -1,6 +1,8 @@
 dist/*
 node_modules
 .env
+.env.local
+.env.*.local
 
 *_sessions
 *tokens
@@ -8,3 +10,20 @@ node_modules
 
 *.log
 *qr.png
+
+# Google credentials - never commit
+google-credentials.json
+credentials.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Config generated at runtime
+config/bot-config.json
