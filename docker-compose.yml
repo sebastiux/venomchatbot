@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  karuna-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${PORT:-3008}:3008"
+    environment:
+      # Meta WhatsApp API
+      - META_JWT_TOKEN=${META_JWT_TOKEN}
+      - META_NUMBER_ID=${META_NUMBER_ID}
+      - META_VERIFY_TOKEN=${META_VERIFY_TOKEN}
+      - META_VERSION=${META_VERSION:-v21.0}
+      # Grok AI
+      - XAI_API_KEY=${XAI_API_KEY}
+      # Google Services
+      - GOOGLE_SHEET_ID=${GOOGLE_SHEET_ID}
+      - MEET_LINK=${MEET_LINK}
+      - KARUNA_EMAIL=${KARUNA_EMAIL}
+      # Server
+      - PORT=3008
+      - ENVIRONMENT=production
+    volumes:
+      - ./config:/app/config
+      - ./google-credentials.json:/app/google-credentials.json:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:3008/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Development services (optional)
+  # Uncomment to run frontend and backend separately in dev mode
+
+  # backend-dev:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile.dev
+  #   ports:
+  #     - "3008:3008"
+  #   volumes:
+  #     - ./backend:/app
+  #     - ./config:/app/config
+  #   environment:
+  #     - META_JWT_TOKEN=${META_JWT_TOKEN}
+  #     - META_NUMBER_ID=${META_NUMBER_ID}
+  #     - META_VERIFY_TOKEN=${META_VERIFY_TOKEN}
+  #     - XAI_API_KEY=${XAI_API_KEY}
+  #     - GOOGLE_SHEET_ID=${GOOGLE_SHEET_ID}
+  #     - MEET_LINK=${MEET_LINK}
+  #     - KARUNA_EMAIL=${KARUNA_EMAIL}
+  #   command: uvicorn app.main:app --host 0.0.0.0 --port 3008 --reload
+
+  # frontend-dev:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile.dev
+  #   ports:
+  #     - "5173:5173"
+  #   volumes:
+  #     - ./frontend:/app
+  #     - /app/node_modules
+  #   command: npm run dev -- --host

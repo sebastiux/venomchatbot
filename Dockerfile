@@ -1,39 +1,62 @@
-# Dockerfile optimized for Railway deployment with Meta WhatsApp API
-FROM node:20-alpine
+# Multi-stage Dockerfile for Karuna Bot
+# Builds React frontend and Python backend
 
-# Install dependencies for native modules
-RUN apk add --no-cache \
-    python3 \
-    make \
-    g++ \
-    ca-certificates
+# ============= Stage 1: Build Frontend =============
+FROM node:20-alpine AS frontend-builder
+
+WORKDIR /app/frontend
+
+# Copy frontend package files
+COPY frontend/package*.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy frontend source
+COPY frontend/ ./
+
+# Build frontend
+RUN npm run build
+
+# ============= Stage 2: Production =============
+FROM python:3.11-slim
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install production dependencies only
-RUN npm ci --only=production
+# Copy backend requirements and install
+COPY backend/requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
-COPY . .
+# Copy backend code
+COPY backend/ ./backend/
 
-# Create non-root user for security
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-RUN chown -R appuser:appgroup /app
+# Copy built frontend from builder stage
+COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
+
+# Create non-root user
+RUN useradd -m -u 1000 appuser && \
+    mkdir -p /app/config && \
+    chown -R appuser:appuser /app
+
 USER appuser
 
-# Environment variables (set by Railway)
-ENV NODE_ENV=production
+# Environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
 ENV PORT=3008
 
-# Expose the port
+# Expose port
 EXPOSE $PORT
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:$PORT/health || exit 1
+    CMD curl -f http://localhost:${PORT}/health || exit 1
 
-# Start the application
-CMD ["npm", "start"]
+# Start application
+CMD ["sh", "-c", "uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT}"]

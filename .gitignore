@@ -1,15 +1,40 @@
-dist/*
-node_modules
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Build outputs
+dist/
+frontend/dist/
+build/
+*.egg-info/
+
+# Environment files
 .env
 .env.local
 .env.*.local
 
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+ENV/
+env/
+.pytest_cache/
+.mypy_cache/
+
+# Old Node.js bot files (legacy)
 *_sessions
 *tokens
 .wwebjs*
-
-*.log
 *qr.png
+
+# Logs
+*.log
+logs/
 
 # Google credentials - never commit
 google-credentials.json
@@ -20,10 +45,22 @@ credentials.json
 .vscode/
 *.swp
 *.swo
+*.sublime-*
 
 # OS
 .DS_Store
 Thumbs.db
+*.bak
 
 # Config generated at runtime
 config/bot-config.json
+
+# Testing
+coverage/
+.coverage
+htmlcov/
+
+# Misc
+*.tmp
+*.temp
+.cache/
