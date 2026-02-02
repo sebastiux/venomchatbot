@@ -82,14 +82,91 @@ You'll need your Railway URL first. After deploying, return here to complete thi
 
 ## Step 2: Railway Deployment
 
-### 2.1 Connect Repository
+You have two deployment options:
+- **Option A: Separate Services** (Recommended) - Frontend and Backend as independent services
+- **Option B: Combined** - Single container with both frontend and backend
+
+---
+
+### Option A: Separate Frontend/Backend Deployment (Recommended)
+
+This approach gives you independent scaling, separate logs, and easier debugging.
+
+#### 2.1a Deploy Backend Service
 
 1. Go to [Railway Dashboard](https://railway.app/dashboard)
 2. Click "New Project" -> "Deploy from GitHub repo"
 3. Select your repository
-4. Railway will automatically detect the Dockerfile
+4. In service settings, set:
+   - **Root Directory**: `/` (root)
+   - **Dockerfile Path**: `backend/Dockerfile`
+5. Railway will use `railway.toml` configuration
 
-### 2.2 Configure Environment Variables
+#### 2.2a Deploy Frontend Service
+
+1. In the same Railway project, click "New Service" -> "GitHub Repo"
+2. Select the same repository
+3. In service settings, set:
+   - **Root Directory**: `frontend`
+   - **Dockerfile Path**: `Dockerfile`
+4. Add build argument in Settings -> Build:
+   - `VITE_API_URL`: `https://your-backend-url.railway.app`
+
+#### 2.3a Configure Backend Environment Variables
+
+In Railway Backend service -> "Variables" tab:
+
+```env
+# Required - Meta WhatsApp API
+META_JWT_TOKEN=your_meta_access_token
+META_NUMBER_ID=your_phone_number_id
+META_VERIFY_TOKEN=your_custom_webhook_verify_token
+META_VERSION=v21.0
+
+# Required - Grok AI
+XAI_API_KEY=your_xai_api_key
+
+# Required - Google Services
+GOOGLE_SHEET_ID=your_google_sheet_id
+MEET_LINK=https://meet.google.com/your-link
+KARUNA_EMAIL=your@email.com
+
+# CORS - Set to your frontend Railway URL
+FRONTEND_URL=https://your-frontend-url.railway.app
+
+# Server Config
+PORT=3008
+ENVIRONMENT=production
+```
+
+#### 2.4a Configure Frontend Build Args
+
+In Railway Frontend service -> "Variables" tab:
+
+```env
+VITE_API_URL=https://your-backend-url.railway.app
+```
+
+#### 2.5a Generate Domains
+
+1. For Backend: Settings -> Domains -> Generate Domain
+2. For Frontend: Settings -> Domains -> Generate Domain
+3. Update `FRONTEND_URL` in backend and `VITE_API_URL` in frontend with the actual URLs
+
+---
+
+### Option B: Combined Single-Container Deployment
+
+If you prefer a simpler setup with everything in one container:
+
+#### 2.1b Connect Repository
+
+1. Go to [Railway Dashboard](https://railway.app/dashboard)
+2. Click "New Project" -> "Deploy from GitHub repo"
+3. Select your repository
+4. Manually set Dockerfile path to `Dockerfile` (root)
+
+#### 2.2b Configure Environment Variables
 
 In Railway, go to your project -> "Variables" tab and add:
 

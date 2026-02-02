@@ -8,7 +8,8 @@ import type {
   MenuOption,
 } from '../types';
 
-const API_BASE = '';
+// API base URL - uses environment variable in production, empty string for same-origin in dev
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 // Helper function for API calls
 async function fetchApi<T>(
