@@ -18,20 +18,24 @@ class ConfigService:
 
     def _ensure_config_file(self) -> None:
         """Ensure config file and directory exist."""
-        config_dir = os.path.dirname(self.config_path)
+        try:
+            config_dir = os.path.dirname(self.config_path)
 
-        if config_dir and not os.path.exists(config_dir):
-            os.makedirs(config_dir, exist_ok=True)
+            if config_dir and not os.path.exists(config_dir):
+                os.makedirs(config_dir, exist_ok=True)
 
-        if not os.path.exists(self.config_path):
-            default_config = {
-                "blacklist": [],
-                "currentFlow": "karuna",
-                "systemPrompt": FLOW_PROMPTS["karuna"]["prompt"],
-                "customFlows": {}
-            }
-            self._save_config(default_config)
-            print("Config file created")
+            if not os.path.exists(self.config_path):
+                default_config = {
+                    "blacklist": [],
+                    "currentFlow": "karuna",
+                    "systemPrompt": FLOW_PROMPTS["karuna"]["prompt"],
+                    "customFlows": {}
+                }
+                self._save_config(default_config)
+                print("Config file created")
+        except Exception as e:
+            print(f"Warning: Could not create config file: {e}")
+            # Continue without persistent config - will use in-memory defaults
 
     def _get_config(self) -> Dict[str, Any]:
         """Read configuration from file."""
