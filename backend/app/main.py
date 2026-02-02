@@ -49,9 +49,15 @@ app.include_router(messages_router)
 
 
 # Static files for frontend (when built)
-FRONTEND_BUILD_PATH = Path(__file__).parent.parent.parent / "frontend" / "dist"
+# In Docker: /app/frontend/dist, in dev: ../frontend/dist
+FRONTEND_BUILD_PATH = Path("/app/frontend/dist")
+if not FRONTEND_BUILD_PATH.exists():
+    FRONTEND_BUILD_PATH = Path(__file__).parent.parent.parent / "frontend" / "dist"
+
 if FRONTEND_BUILD_PATH.exists():
-    app.mount("/assets", StaticFiles(directory=FRONTEND_BUILD_PATH / "assets"), name="assets")
+    assets_path = FRONTEND_BUILD_PATH / "assets"
+    if assets_path.exists():
+        app.mount("/assets", StaticFiles(directory=assets_path), name="assets")
 
 
 # Privacy Policy Page
@@ -188,18 +194,6 @@ TERMS_OF_SERVICE_HTML = """
 </body>
 </html>
 """
-
-
-@router.get("/privacy", response_class=HTMLResponse)
-async def privacy_policy():
-    """Privacy policy page."""
-    return HTMLResponse(content=PRIVACY_POLICY_HTML)
-
-
-@router.get("/terms", response_class=HTMLResponse)
-async def terms_of_service():
-    """Terms of service page."""
-    return HTMLResponse(content=TERMS_OF_SERVICE_HTML)
 
 
 # Add privacy and terms routes to app
