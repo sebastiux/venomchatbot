@@ -92,13 +92,96 @@ async def process_message(body: dict):
         # Send response via WhatsApp
         print(f"STEP 5 - Sending response to {from_number}...")
         print(f"STEP 5 - Token present: {bool(whatsapp_service.jwt_token)}, Number ID: ...{whatsapp_service.number_id[-4:]}")
+        print(f"STEP 5 - Full URL: {whatsapp_service.base_url}/messages")
         result = await whatsapp_service.send_message(from_number, response)
         print(f"STEP 5 - Send result: {result}")
+        if not result.get("success"):
+            print(f"STEP 5 - SEND FAILED! Error: {result.get('error', 'unknown')}")
         print(f"{'='*50}\n")
 
     except Exception as e:
         print(f"\nPROCESS MESSAGE ERROR: {str(e)}")
         print(f"TRACEBACK:\n{traceback.format_exc()}")
+
+
+@router.get("/diagnose")
+async def diagnose():
+    """Full diagnostic check of all services and configuration."""
+    import httpx
+
+    settings = get_settings()
+    results = {
+        "config_check": {},
+        "meta_api_check": {},
+        "grok_check": {},
+        "recommendations": []
+    }
+
+    # 1. Config check
+    results["config_check"] = {
+        "meta_jwt_token": "SET" if settings.meta_jwt_token and not settings.meta_jwt_token.startswith("your_") else "MISSING",
+        "meta_jwt_token_prefix": (settings.meta_jwt_token[:20] + "...") if settings.meta_jwt_token else "EMPTY",
+        "meta_number_id": settings.meta_number_id if settings.meta_number_id else "MISSING",
+        "meta_verify_token": "SET" if settings.meta_verify_token else "MISSING",
+        "meta_version": settings.meta_version,
+        "xai_api_key": "SET" if settings.xai_api_key and not settings.xai_api_key.startswith("your_") else "MISSING",
+    }
+
+    # 2. Test Meta API - verify token by checking phone number info
+    if settings.meta_jwt_token and settings.meta_number_id:
+        try:
+            async with httpx.AsyncClient() as client:
+                # Test 1: Get phone number info (validates both token and number_id)
+                url = f"https://graph.facebook.com/{settings.meta_version}/{settings.meta_number_id}"
+                headers = {"Authorization": f"Bearer {settings.meta_jwt_token}"}
+                response = await client.get(url, headers=headers, timeout=15.0)
+
+                if response.status_code == 200:
+                    phone_data = response.json()
+                    results["meta_api_check"]["token_valid"] = True
+                    results["meta_api_check"]["number_id_valid"] = True
+                    results["meta_api_check"]["phone_info"] = {
+                        "display_phone_number": phone_data.get("display_phone_number"),
+                        "verified_name": phone_data.get("verified_name"),
+                        "quality_rating": phone_data.get("quality_rating"),
+                        "id": phone_data.get("id"),
+                    }
+                else:
+                    error_data = response.json() if "application/json" in response.headers.get("content-type", "") else response.text
+                    results["meta_api_check"]["token_valid"] = False
+                    results["meta_api_check"]["status_code"] = response.status_code
+                    results["meta_api_check"]["error"] = error_data
+                    results["recommendations"].append(
+                        f"Meta API returned {response.status_code}. Token may be expired or number_id may be wrong."
+                    )
+        except Exception as e:
+            results["meta_api_check"]["error"] = str(e)
+            results["recommendations"].append("Could not connect to Meta API. Check network.")
+    else:
+        results["meta_api_check"]["error"] = "Token or Number ID not configured"
+        results["recommendations"].append("Set META_JWT_TOKEN and META_NUMBER_ID in environment variables.")
+
+    # 3. Check Grok
+    if not settings.xai_api_key or settings.xai_api_key.startswith("your_"):
+        results["grok_check"]["status"] = "NOT_CONFIGURED"
+        results["recommendations"].append("XAI_API_KEY not set. Bot will respond with error message instead of AI.")
+    else:
+        results["grok_check"]["status"] = "CONFIGURED"
+        results["grok_check"]["client_ready"] = grok_service.client is not None
+
+    # 4. Summary
+    all_ok = (
+        results["config_check"]["meta_jwt_token"] == "SET"
+        and results["config_check"]["meta_number_id"] not in ["", "MISSING"]
+        and results["meta_api_check"].get("token_valid") is True
+        and results["grok_check"].get("status") == "CONFIGURED"
+    )
+    results["overall_status"] = "ALL_OK" if all_ok else "ISSUES_FOUND"
+
+    if not results["recommendations"]:
+        results["recommendations"].append("All checks passed. If messages still don't arrive, check Railway logs for STEP 1-5 output.")
+
+    return results
 
 
 @router.get("/test-send/{phone_number}")
