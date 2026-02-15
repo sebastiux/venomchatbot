@@ -1,5 +1,7 @@
 """Meta WhatsApp webhook endpoints."""
-from fastapi import APIRouter, Request, Response, HTTPException
+import asyncio
+import traceback
+from fastapi import APIRouter, Request, Response, HTTPException, BackgroundTasks
 from ..config import get_settings
 from ..services.whatsapp_service import whatsapp_service
 from ..services.grok_service import grok_service
@@ -30,25 +32,16 @@ async def verify_webhook(request: Request):
     raise HTTPException(status_code=403, detail="Verification failed")
 
 
-@router.post("/webhook")
-async def handle_webhook(request: Request):
-    """Handle incoming WhatsApp messages."""
+async def process_message(body: dict):
+    """Process incoming WhatsApp message in background."""
     try:
-        body = await request.json()
-        print(f"\n{'='*50}")
-        print(f"WEBHOOK POST received: {body.get('object', 'unknown')}")
-
-        if body.get("object") != "whatsapp_business_account":
-            print("IGNORED: Not a whatsapp_business_account object")
-            return {"status": "ignored"}
-
         # Extract message data
         message_data = whatsapp_service.extract_message_data(body)
         print(f"STEP 1 - Extracted message data: {message_data}")
 
         if not message_data:
-            print("STEP 1 FAIL - No message data in webhook")
-            return {"status": "no_message"}
+            print("STEP 1 - No message data (status update), skipping")
+            return
 
         from_number = message_data.get("from")
         message_text = message_data.get("text")
@@ -57,20 +50,20 @@ async def handle_webhook(request: Request):
 
         print(f"STEP 2 - Message from {from_number}: {message_text} (type: {message_type})")
 
-        # Skip non-text messages for now
+        # Skip non-text messages
         if message_type != "text" or not message_text:
             print(f"STEP 2 SKIP - Non-text message type: {message_type}")
-            return {"status": "skipped"}
+            return
 
         # Check if number is blacklisted
         if config_service.is_blacklisted(from_number):
-            print(f"STEP 3 SKIP - Number {from_number} is blacklisted")
-            return {"status": "blacklisted"}
+            print(f"STEP 2 SKIP - Number {from_number} is blacklisted")
+            return
 
         # Skip group messages
         if "@g.us" in from_number:
-            print("STEP 3 SKIP - Group message")
-            return {"status": "group_ignored"}
+            print("STEP 2 SKIP - Group message")
+            return
 
         # Mark message as read
         print("STEP 3 - Marking message as read...")
@@ -80,36 +73,54 @@ async def handle_webhook(request: Request):
         # Handle reset command
         if message_text.lower().strip() in ["reset", "reiniciar", "limpiar"]:
             grok_service.clear_conversation(from_number)
-            await whatsapp_service.send_message(
+            result = await whatsapp_service.send_message(
                 from_number,
                 "Conversacion reiniciada. Como puedo ayudarte?"
             )
-            return {"status": "reset"}
+            print(f"STEP 3 - Reset sent: {result}")
+            return
 
         # Get AI response
         print("STEP 4 - Getting AI response from Grok...")
         response = await grok_service.get_response(from_number, message_text)
-        print(f"STEP 4 - Grok response: {response[:200] if response else 'EMPTY'}...")
+        print(f"STEP 4 - Grok response: {response[:200] if response else 'EMPTY'}")
 
         # Check for schedule trigger
         if "TRIGGER_SCHEDULE" in response:
             response = "Me encantaria ayudarte a agendar una cita. Por favor proporcioname tu nombre completo."
 
-        # Send response
+        # Send response via WhatsApp
         print(f"STEP 5 - Sending response to {from_number}...")
-        print(f"STEP 5 - WhatsApp service number_id: {whatsapp_service.number_id}")
-        print(f"STEP 5 - WhatsApp service token present: {bool(whatsapp_service.jwt_token)}")
+        print(f"STEP 5 - Token present: {bool(whatsapp_service.jwt_token)}, Number ID: ...{whatsapp_service.number_id[-4:]}")
         result = await whatsapp_service.send_message(from_number, response)
         print(f"STEP 5 - Send result: {result}")
         print(f"{'='*50}\n")
 
-        return {
-            "status": "sent" if result.get("success") else "error",
-            "message_id": result.get("message_id")
-        }
+    except Exception as e:
+        print(f"\nPROCESS MESSAGE ERROR: {str(e)}")
+        print(f"TRACEBACK:\n{traceback.format_exc()}")
+
+
+@router.post("/webhook")
+async def handle_webhook(request: Request, background_tasks: BackgroundTasks):
+    """Handle incoming WhatsApp webhook - return 200 immediately, process in background."""
+    try:
+        body = await request.json()
+        print(f"\n{'='*50}")
+        print(f"WEBHOOK POST received: {body.get('object', 'unknown')}")
+
+        if body.get("object") != "whatsapp_business_account":
+            print("IGNORED: Not a whatsapp_business_account object")
+            return {"status": "ignored"}
+
+        # Process message in background - return 200 to Meta immediately
+        # Meta requires quick 200 response, otherwise it retries
+        background_tasks.add_task(process_message, body)
+        print("Message queued for background processing")
+
+        return {"status": "received"}
 
     except Exception as e:
-        import traceback
         print(f"\nWEBHOOK ERROR: {str(e)}")
         print(f"TRACEBACK:\n{traceback.format_exc()}")
         return {"status": "error", "message": str(e)}

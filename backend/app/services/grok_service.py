@@ -1,6 +1,6 @@
 """Grok AI service for generating responses."""
 from typing import Dict, List, Optional
-from openai import OpenAI
+from openai import AsyncOpenAI
 from ..config import get_settings
 from .config_service import config_service
 
@@ -13,7 +13,7 @@ class GrokService:
         print("Initializing GrokService...")
         print(f"API Key present: {bool(settings.xai_api_key)}")
 
-        self.client = OpenAI(
+        self.client = AsyncOpenAI(
             api_key=settings.xai_api_key,
             base_url="https://api.x.ai/v1"
         ) if settings.xai_api_key else None
@@ -123,7 +123,7 @@ class GrokService:
 
             current_prompt = self.system_prompt or config_service.get_system_prompt()
 
-            completion = self.client.chat.completions.create(
+            completion = await self.client.chat.completions.create(
                 model="grok-4-fast-reasoning",
                 messages=[
                     {"role": "system", "content": current_prompt},
