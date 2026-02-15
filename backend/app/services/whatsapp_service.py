@@ -25,19 +25,14 @@ class WhatsAppService:
 
     @staticmethod
     def normalize_phone_number(phone: str) -> str:
-        """Normalize phone number format.
+        """Clean phone number, keeping original format.
 
-        Mexican numbers: WhatsApp webhooks send '521XXXXXXXXXX' (13 digits)
-        but Meta API expects '52XXXXXXXXXX' (12 digits, without the '1' after country code).
+        Mexican numbers: WhatsApp uses '521XXXXXXXXXX' (13 digits) internally.
+        We keep this format as-is to match WhatsApp's internal routing.
+        The BuilderBot Meta provider also sends numbers without modification.
         """
-        # Remove any non-digit characters
+        # Remove any non-digit characters, keep the number as-is
         phone = ''.join(c for c in phone if c.isdigit())
-
-        # Mexican numbers: 521XXXXXXXXXX (13 digits) -> 52XXXXXXXXXX (12 digits)
-        if phone.startswith("521") and len(phone) == 13:
-            phone = "52" + phone[3:]
-            print(f"  Phone normalized (MX): 521... -> 52{phone[2:6]}...")
-
         return phone
 
     async def send_message(self, to: str, message: str) -> Dict[str, Any]:
