@@ -242,13 +242,49 @@ async def serve_frontend(full_path: str):
 
 @app.on_event("startup")
 async def startup_event():
-    """Application startup."""
+    """Application startup with configuration validation."""
+    ok = "\u2705"
+    fail = "\u274c"
+
+    def check(value: str, placeholder: str = "") -> str:
+        """Return OK/FAIL status for a config value."""
+        if not value or value == placeholder or value.startswith("your_"):
+            return fail
+        return ok
+
+    meta_token_status = check(settings.meta_jwt_token, "your_permanent_access_token_here")
+    meta_number_status = check(settings.meta_number_id, "your_phone_number_id_here")
+    meta_verify_status = check(settings.meta_verify_token, "your_custom_verify_token_here")
+    grok_status = check(settings.xai_api_key, "your_xai_api_key_here")
+    sheets_status = check(settings.google_sheet_id, "your_google_sheet_id_here")
+    meet_status = check(settings.meet_link)
+
+    meta_ready = all(s == ok for s in [meta_token_status, meta_number_status, meta_verify_status])
+
     print("=" * 60)
-    print(f"KARUNA BOT started on port {settings.port}")
-    print(f"Provider: Meta WhatsApp Business API ({settings.meta_version})")
-    print(f"Number ID: ...{settings.meta_number_id[-4:] if settings.meta_number_id else 'NOT SET'}")
-    print(f"Grok: {'OK' if settings.xai_api_key else 'MISSING'}")
-    print(f"Google Sheets: {'OK' if settings.google_sheet_id else 'MISSING'}")
-    print(f"Meet Link: {'OK' if settings.meet_link else 'MISSING'}")
-    print(f"API Docs: http://localhost:{settings.port}/docs")
+    print("  KARUNA BOT v2.0.0")
+    print("=" * 60)
+    print()
+    print("  META WHATSAPP API:")
+    print(f"    {meta_token_status} META_JWT_TOKEN    - Access token")
+    print(f"    {meta_number_status} META_NUMBER_ID    - Phone number ID")
+    print(f"    {meta_verify_status} META_VERIFY_TOKEN - Webhook verify token")
+    print(f"       API Version: {settings.meta_version}")
+    if settings.meta_number_id and not settings.meta_number_id.startswith("your_"):
+        print(f"       Number ID: ...{settings.meta_number_id[-4:]}")
+    print()
+    print("  AI & SERVICES:")
+    print(f"    {grok_status} XAI_API_KEY       - Grok AI")
+    print(f"    {sheets_status} GOOGLE_SHEET_ID   - Google Sheets")
+    print(f"    {meet_status} MEET_LINK         - Google Meet")
+    print()
+    print(f"  SERVER:")
+    print(f"    Port: {settings.port}")
+    print(f"    Environment: {settings.environment}")
+    print(f"    API Docs: http://localhost:{settings.port}/docs")
+    print()
+    if not meta_ready:
+        print("  *** META API NOT CONFIGURED ***")
+        print("  See SETUP-META-API.md for setup instructions.")
+        print()
     print("=" * 60)
