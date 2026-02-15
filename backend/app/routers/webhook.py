@@ -106,87 +106,176 @@ async def process_message(body: dict):
 
 @router.get("/diagnose")
 async def diagnose():
-    """Full diagnostic check of all services and configuration."""
+    """Full diagnostic check of all services and configuration.
+
+    Checks: credentials, Meta API connectivity, phone number info,
+    WhatsApp Business Account status, Grok AI, and webhook app info.
+    """
     import httpx
 
     settings = get_settings()
     results = {
+        "overall_status": "CHECKING",
         "config_check": {},
         "meta_api_check": {},
+        "whatsapp_account": {},
+        "webhook_check": {},
         "grok_check": {},
         "recommendations": []
     }
 
     # 1. Config check
+    token_ok = bool(settings.meta_jwt_token and not settings.meta_jwt_token.startswith("your_"))
+    number_ok = bool(settings.meta_number_id and not settings.meta_number_id.startswith("your_"))
+    verify_ok = bool(settings.meta_verify_token and not settings.meta_verify_token.startswith("your_"))
+
     results["config_check"] = {
-        "meta_jwt_token": "SET" if settings.meta_jwt_token and not settings.meta_jwt_token.startswith("your_") else "MISSING",
-        "meta_jwt_token_prefix": (settings.meta_jwt_token[:20] + "...") if settings.meta_jwt_token else "EMPTY",
-        "meta_number_id": settings.meta_number_id if settings.meta_number_id else "MISSING",
-        "meta_verify_token": "SET" if settings.meta_verify_token else "MISSING",
+        "meta_jwt_token": "SET" if token_ok else "MISSING",
+        "meta_jwt_token_length": len(settings.meta_jwt_token) if settings.meta_jwt_token else 0,
+        "meta_number_id": settings.meta_number_id if number_ok else "MISSING",
+        "meta_verify_token": "SET" if verify_ok else "MISSING",
         "meta_version": settings.meta_version,
         "xai_api_key": "SET" if settings.xai_api_key and not settings.xai_api_key.startswith("your_") else "MISSING",
+        "port": settings.port,
+        "environment": settings.environment,
     }
 
-    # 2. Test Meta API - verify token by checking phone number info
-    if settings.meta_jwt_token and settings.meta_number_id:
+    if not token_ok:
+        results["recommendations"].append(
+            "META_JWT_TOKEN not configured. Get it from: Meta Developer Portal > App > WhatsApp > API Setup"
+        )
+    if not number_ok:
+        results["recommendations"].append(
+            "META_NUMBER_ID not configured. Get it from: Meta Developer Portal > App > WhatsApp > API Setup > Phone Number ID"
+        )
+
+    # 2. Test Meta API - verify token and get phone number info
+    if token_ok and number_ok:
         try:
             async with httpx.AsyncClient() as client:
-                # Test 1: Get phone number info (validates both token and number_id)
-                url = f"https://graph.facebook.com/{settings.meta_version}/{settings.meta_number_id}"
                 headers = {"Authorization": f"Bearer {settings.meta_jwt_token}"}
-                response = await client.get(url, headers=headers, timeout=15.0)
+
+                # Test 1: Get phone number info
+                url = f"https://graph.facebook.com/{settings.meta_version}/{settings.meta_number_id}"
+                params = {"fields": "display_phone_number,verified_name,quality_rating,platform_type,status,name_status,is_official_business_account"}
+                response = await client.get(url, headers=headers, params=params, timeout=15.0)
 
                 if response.status_code == 200:
                     phone_data = response.json()
                     results["meta_api_check"]["token_valid"] = True
                     results["meta_api_check"]["number_id_valid"] = True
-                    results["meta_api_check"]["phone_info"] = {
-                        "display_phone_number": phone_data.get("display_phone_number"),
-                        "verified_name": phone_data.get("verified_name"),
-                        "quality_rating": phone_data.get("quality_rating"),
-                        "id": phone_data.get("id"),
-                    }
+                    results["meta_api_check"]["phone_info"] = phone_data
+
+                    # Check if it's a test number
+                    display = phone_data.get("display_phone_number", "")
+                    if "+1 555" in display:
+                        results["meta_api_check"]["is_test_number"] = True
+                        results["recommendations"].append(
+                            "Using Meta TEST number. You can only send messages to numbers added as testers in Meta Developer Portal > App Roles > Roles."
+                        )
                 else:
                     error_data = response.json() if "application/json" in response.headers.get("content-type", "") else response.text
                     results["meta_api_check"]["token_valid"] = False
                     results["meta_api_check"]["status_code"] = response.status_code
                     results["meta_api_check"]["error"] = error_data
-                    results["recommendations"].append(
-                        f"Meta API returned {response.status_code}. Token may be expired or number_id may be wrong."
-                    )
+
+                    if response.status_code == 190 or "expired" in str(error_data).lower():
+                        results["recommendations"].append(
+                            "TOKEN EXPIRED! Temporary tokens expire every 24h. Generate a new one in Meta Developer Portal > WhatsApp > API Setup, or create a System User token for permanent access."
+                        )
+                    elif response.status_code == 401 or response.status_code == 403:
+                        results["recommendations"].append(
+                            "TOKEN INVALID or INSUFFICIENT PERMISSIONS. Re-generate in Meta Developer Portal."
+                        )
+                    else:
+                        results["recommendations"].append(
+                            f"Meta API error {response.status_code}. Check token and number_id."
+                        )
+
+                # Test 2: Get WhatsApp Business Account info
+                if results["meta_api_check"].get("token_valid"):
+                    waba_url = f"https://graph.facebook.com/{settings.meta_version}/{settings.meta_number_id}/whatsapp_business_profile"
+                    params2 = {"fields": "about,address,description,email,profile_picture_url,websites,vertical"}
+                    waba_response = await client.get(waba_url, headers=headers, params=params2, timeout=15.0)
+                    if waba_response.status_code == 200:
+                        results["whatsapp_account"]["business_profile"] = waba_response.json().get("data", [{}])[0] if waba_response.json().get("data") else {}
+                    else:
+                        results["whatsapp_account"]["error"] = f"Could not fetch business profile: {waba_response.status_code}"
+
+                # Test 3: Check registered webhook (app subscription)
+                if results["meta_api_check"].get("token_valid"):
+                    try:
+                        app_url = f"https://graph.facebook.com/{settings.meta_version}/{settings.meta_number_id}"
+                        app_params = {"fields": "messaging_product"}
+                        app_response = await client.get(app_url, headers=headers, params=app_params, timeout=15.0)
+                        if app_response.status_code == 200:
+                            results["webhook_check"]["messaging_product"] = app_response.json().get("messaging_product", "unknown")
+                    except Exception:
+                        pass
+
+        except httpx.ConnectTimeout:
+            results["meta_api_check"]["error"] = "Connection timeout to Meta API"
+            results["recommendations"].append("Network timeout connecting to Meta API. Check internet/firewall.")
         except Exception as e:
             results["meta_api_check"]["error"] = str(e)
-            results["recommendations"].append("Could not connect to Meta API. Check network.")
+            results["recommendations"].append(f"Meta API connection error: {str(e)}")
     else:
         results["meta_api_check"]["error"] = "Token or Number ID not configured"
-        results["recommendations"].append("Set META_JWT_TOKEN and META_NUMBER_ID in environment variables.")
 
-    # 3. Check Grok
+    # 3. Check Grok AI
     if not settings.xai_api_key or settings.xai_api_key.startswith("your_"):
         results["grok_check"]["status"] = "NOT_CONFIGURED"
-        results["recommendations"].append("XAI_API_KEY not set. Bot will respond with error message instead of AI.")
+        results["recommendations"].append(
+            "XAI_API_KEY not set. Bot receives messages but responds with error. Get key from https://x.ai/api"
+        )
     else:
         results["grok_check"]["status"] = "CONFIGURED"
         results["grok_check"]["client_ready"] = grok_service.client is not None
+        results["grok_check"]["model"] = "grok-4-fast-reasoning"
 
-    # 4. Summary
+    # 4. Service instances check
+    results["services"] = {
+        "whatsapp_service": {
+            "initialized": bool(whatsapp_service.jwt_token),
+            "number_id": f"...{whatsapp_service.number_id[-4:]}" if whatsapp_service.number_id else "NOT SET",
+            "base_url": whatsapp_service.base_url,
+        },
+        "grok_service": {
+            "client_ready": grok_service.client is not None,
+            "active_conversations": len(grok_service.conversations),
+        }
+    }
+
+    # 5. Summary
     all_ok = (
-        results["config_check"]["meta_jwt_token"] == "SET"
-        and results["config_check"]["meta_number_id"] not in ["", "MISSING"]
+        token_ok
+        and number_ok
         and results["meta_api_check"].get("token_valid") is True
         and results["grok_check"].get("status") == "CONFIGURED"
     )
     results["overall_status"] = "ALL_OK" if all_ok else "ISSUES_FOUND"
 
     if not results["recommendations"]:
-        results["recommendations"].append("All checks passed. If messages still don't arrive, check Railway logs for STEP 1-5 output.")
+        results["recommendations"] = [
+            "All checks passed!",
+            "If messages still don't arrive, check:",
+            "1. Webhook URL in Meta Developer Portal matches your Railway URL",
+            "2. Webhook subscriptions include 'messages' field",
+            "3. App mode is Live (not Development) or recipient is a tester",
+            "4. Check Railway logs for STEP 1-5 output when sending a message"
+        ]
 
     return results
 
 
 @router.get("/test-send/{phone_number}")
 async def test_send(phone_number: str):
-    """Test endpoint to verify WhatsApp API is working. Call: /test-send/5217202533388"""
+    """Test sending a text message. Call: /test-send/5217202533388
+
+    NOTE: For test numbers, the recipient must be added as a tester
+    in Meta Developer Portal > App Roles. If text messages fail,
+    try /test-template/{phone_number} which uses the hello_world template.
+    """
     import httpx
 
     settings = get_settings()
@@ -220,20 +309,132 @@ async def test_send(phone_number: str):
     try:
         async with httpx.AsyncClient() as client:
             response = await client.post(url, json=payload, headers=headers, timeout=30.0)
+            response_data = response.json() if response.headers.get("content-type", "").startswith("application/json") else response.text
             result = {
+                "test_type": "text_message",
                 "status_code": response.status_code,
-                "response": response.json() if response.headers.get("content-type", "").startswith("application/json") else response.text,
+                "success": response.status_code == 200,
+                "response": response_data,
                 "config": {
                     "number_id": number_id,
                     "api_version": version,
-                    "token_present": bool(token),
-                    "token_prefix": token[:20] + "..." if token else "EMPTY"
+                    "phone_sent_to": phone_number,
+                    "phone_original": original_phone,
                 }
             }
+
+            # Add helpful error interpretation
+            if response.status_code != 200:
+                error_code = None
+                if isinstance(response_data, dict):
+                    error_code = response_data.get("error", {}).get("code")
+                    error_msg = response_data.get("error", {}).get("message", "")
+
+                    if error_code == 190:
+                        result["diagnosis"] = "TOKEN EXPIRED - Generate new token in Meta Developer Portal"
+                    elif error_code == 131030:
+                        result["diagnosis"] = "RECIPIENT NOT IN ALLOWED LIST - Add this number as a tester in Meta Developer Portal > App Roles"
+                    elif error_code == 131047:
+                        result["diagnosis"] = "RE-ENGAGEMENT REQUIRED - Need to send a template message first (try /test-template/{phone})"
+                    elif error_code == 131026:
+                        result["diagnosis"] = "MESSAGE UNDELIVERABLE - Number may not have WhatsApp or is unreachable"
+                    elif "not started" in error_msg.lower() or error_code == 131031:
+                        result["diagnosis"] = "TESTING NOT STARTED - Go to Meta Developer Portal > App Review > Start Testing"
+                    else:
+                        result["diagnosis"] = f"Error code {error_code}: {error_msg}"
+
             print(f"Result: {result}")
             return result
     except Exception as e:
         return {"error": str(e), "config": {"number_id": number_id, "api_version": version}}
+
+
+@router.get("/test-template/{phone_number}")
+async def test_template(phone_number: str, template: str = "hello_world", lang: str = "en_US"):
+    """Test sending a template message (required for initiating conversations).
+
+    Call: /test-template/5217202533388
+    Optional: /test-template/5217202533388?template=hello_world&lang=en_US
+
+    Template messages are needed when:
+    - Starting a new conversation (no user message in last 24h)
+    - Using the Meta test phone number
+    - App is in Development mode
+
+    The 'hello_world' template is pre-approved by Meta for all accounts.
+    """
+    import httpx
+
+    settings = get_settings()
+    number_id = settings.meta_number_id
+    token = settings.meta_jwt_token
+    version = settings.meta_version
+
+    original_phone = phone_number
+    phone_number = whatsapp_service.normalize_phone_number(phone_number)
+
+    url = f"https://graph.facebook.com/{version}/{number_id}/messages"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": phone_number,
+        "type": "template",
+        "template": {
+            "name": template,
+            "language": {"code": lang}
+        }
+    }
+
+    print(f"\n--- TEST TEMPLATE ---")
+    print(f"URL: {url}")
+    print(f"To: {phone_number} (original: {original_phone})")
+    print(f"Template: {template} ({lang})")
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, json=payload, headers=headers, timeout=30.0)
+            response_data = response.json() if response.headers.get("content-type", "").startswith("application/json") else response.text
+
+            result = {
+                "test_type": "template_message",
+                "template_name": template,
+                "template_language": lang,
+                "status_code": response.status_code,
+                "success": response.status_code == 200,
+                "response": response_data,
+                "config": {
+                    "number_id": number_id,
+                    "phone_sent_to": phone_number,
+                    "phone_original": original_phone,
+                }
+            }
+
+            if response.status_code != 200 and isinstance(response_data, dict):
+                error_code = response_data.get("error", {}).get("code")
+                error_msg = response_data.get("error", {}).get("message", "")
+
+                if error_code == 190:
+                    result["diagnosis"] = "TOKEN EXPIRED - Generate new token in Meta Developer Portal"
+                elif error_code == 131030:
+                    result["diagnosis"] = "RECIPIENT NOT IN ALLOWED LIST - Add number as tester in Meta Developer Portal > App Roles"
+                elif error_code == 132001:
+                    result["diagnosis"] = f"TEMPLATE '{template}' NOT FOUND - Check template name in Meta Developer Portal > WhatsApp > Message Templates"
+                elif "not started" in error_msg.lower():
+                    result["diagnosis"] = "TESTING NOT STARTED - Go to Meta Developer Portal > App Review > Start Testing"
+                else:
+                    result["diagnosis"] = f"Error {error_code}: {error_msg}"
+
+            if response.status_code == 200:
+                result["next_steps"] = "Template sent! The recipient should receive a message. Now they can reply and the bot will respond automatically."
+
+            print(f"Result: {result}")
+            return result
+    except Exception as e:
+        return {"error": str(e)}
 
 
 @router.post("/webhook")
