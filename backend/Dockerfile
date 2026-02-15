@@ -10,14 +10,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install
-COPY requirements.txt ./
+# Note: build context is the project root (not backend/), so paths are relative to root
+COPY backend/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
-COPY . ./backend/
+# Copy backend application code
+COPY backend/ ./backend/
 
-# Create __init__.py for package recognition
-RUN touch backend/__init__.py
+# Copy config directory
+COPY config/ ./config/
 
 # Create non-root user
 RUN useradd -m -u 1000 appuser && \
