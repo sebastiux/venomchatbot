@@ -194,6 +194,10 @@ async def test_send(phone_number: str):
     token = settings.meta_jwt_token
     version = settings.meta_version
 
+    # Normalize phone number (Mexican numbers: 521... -> 52...)
+    original_phone = phone_number
+    phone_number = whatsapp_service.normalize_phone_number(phone_number)
+
     url = f"https://graph.facebook.com/{version}/{number_id}/messages"
     headers = {
         "Authorization": f"Bearer {token}",
@@ -209,7 +213,7 @@ async def test_send(phone_number: str):
 
     print(f"\n--- TEST SEND ---")
     print(f"URL: {url}")
-    print(f"To: {phone_number}")
+    print(f"To: {phone_number} (original: {original_phone})")
     print(f"Token (first 20 chars): {token[:20]}...")
     print(f"Number ID: {number_id}")
 

@@ -23,8 +23,26 @@ class WhatsAppService:
         print(f"  Number ID: ...{self.number_id[-4:] if self.number_id else 'NOT SET'}")
         print(f"  API Version: {self.version}")
 
+    @staticmethod
+    def normalize_phone_number(phone: str) -> str:
+        """Normalize phone number format.
+
+        Mexican numbers: WhatsApp webhooks send '521XXXXXXXXXX' (13 digits)
+        but Meta API expects '52XXXXXXXXXX' (12 digits, without the '1' after country code).
+        """
+        # Remove any non-digit characters
+        phone = ''.join(c for c in phone if c.isdigit())
+
+        # Mexican numbers: 521XXXXXXXXXX (13 digits) -> 52XXXXXXXXXX (12 digits)
+        if phone.startswith("521") and len(phone) == 13:
+            phone = "52" + phone[3:]
+            print(f"  Phone normalized (MX): 521... -> 52{phone[2:6]}...")
+
+        return phone
+
     async def send_message(self, to: str, message: str) -> Dict[str, Any]:
         """Send a text message to a WhatsApp number."""
+        to = self.normalize_phone_number(to)
         url = f"{self.base_url}/messages"
 
         payload = {
@@ -77,6 +95,7 @@ class WhatsAppService:
         components: Optional[list] = None
     ) -> Dict[str, Any]:
         """Send a template message."""
+        to = self.normalize_phone_number(to)
         url = f"{self.base_url}/messages"
 
         payload = {
