@@ -101,6 +101,54 @@ async def process_message(body: dict):
         print(f"TRACEBACK:\n{traceback.format_exc()}")
 
 
+@router.get("/test-send/{phone_number}")
+async def test_send(phone_number: str):
+    """Test endpoint to verify WhatsApp API is working. Call: /test-send/5217202533388"""
+    import httpx
+
+    settings = get_settings()
+    number_id = settings.meta_number_id
+    token = settings.meta_jwt_token
+    version = settings.meta_version
+
+    url = f"https://graph.facebook.com/{version}/{number_id}/messages"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": phone_number,
+        "type": "text",
+        "text": {"preview_url": False, "body": "Test desde Karuna Bot API"}
+    }
+
+    print(f"\n--- TEST SEND ---")
+    print(f"URL: {url}")
+    print(f"To: {phone_number}")
+    print(f"Token (first 20 chars): {token[:20]}...")
+    print(f"Number ID: {number_id}")
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, json=payload, headers=headers, timeout=30.0)
+            result = {
+                "status_code": response.status_code,
+                "response": response.json() if response.headers.get("content-type", "").startswith("application/json") else response.text,
+                "config": {
+                    "number_id": number_id,
+                    "api_version": version,
+                    "token_present": bool(token),
+                    "token_prefix": token[:20] + "..." if token else "EMPTY"
+                }
+            }
+            print(f"Result: {result}")
+            return result
+    except Exception as e:
+        return {"error": str(e), "config": {"number_id": number_id, "api_version": version}}
+
+
 @router.post("/webhook")
 async def handle_webhook(request: Request, background_tasks: BackgroundTasks):
     """Handle incoming WhatsApp webhook - return 200 immediately, process in background."""
