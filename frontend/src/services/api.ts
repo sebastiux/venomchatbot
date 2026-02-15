@@ -1,5 +1,6 @@
 import type {
   ConnectionStatusResponse,
+  QRResponse,
   BlacklistResponse,
   FlowListResponse,
   Flow,
@@ -34,6 +35,11 @@ async function fetchApi<T>(
 // Connection Status
 export async function getConnectionStatus(): Promise<ConnectionStatusResponse> {
   return fetchApi<ConnectionStatusResponse>('/api/connection-status');
+}
+
+// QR Code
+export async function getQR(): Promise<QRResponse> {
+  return fetchApi<QRResponse>('/api/qr');
 }
 
 // Health Check

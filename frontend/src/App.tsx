@@ -87,7 +87,7 @@ export default function App() {
       <footer className="bg-white border-t mt-auto">
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between text-sm text-gray-500">
-            <p>Karuna Bot v2.0.0 - Meta WhatsApp Business API</p>
+            <p>Karuna Bot v3.1.0 - Baileys WhatsApp Web</p>
             <div className="flex gap-4">
               <a href="/privacy" className="hover:text-gray-700">
                 Privacidad

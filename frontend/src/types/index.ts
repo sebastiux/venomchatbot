@@ -1,12 +1,18 @@
 // Connection Status Types
-export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
+export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'qr_ready' | 'error';
 
 export interface ConnectionStatusResponse {
   status: ConnectionStatus;
   provider: string;
   error: string | null;
-  number_id: string | null;
+  phone: string | null;
+  qr_available: boolean;
   timestamp: string;
+}
+
+export interface QRResponse {
+  qr: string | null;
+  status: ConnectionStatus;
 }
 
 // Blacklist Types

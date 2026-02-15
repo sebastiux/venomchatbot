@@ -1,12 +1,17 @@
 /**
- * Karuna Bot - BuilderBot with Meta Provider + Grok AI
+ * Karuna Bot - BuilderBot with Baileys Provider + Grok AI
  *
- * Uses @builderbot/provider-meta for WhatsApp connection (proven to work)
+ * Uses @builderbot/provider-baileys for WhatsApp connection via QR code
  * and xAI Grok for AI-powered responses.
+ *
+ * The Baileys provider connects through WhatsApp Web protocol,
+ * bypassing the need for Meta Business API.
  */
 import { createBot, createProvider, createFlow, addKeyword, EVENTS } from '@builderbot/bot'
 import { MemoryDB as Database } from '@builderbot/bot'
-import { MetaProvider as Provider } from '@builderbot/provider-meta'
+import { BaileysProvider as Provider } from '@builderbot/provider-baileys'
+import fs from 'fs'
+import path from 'path'
 import 'dotenv/config'
 
 import { grokService } from './services/grokService.js'
@@ -14,6 +19,39 @@ import { configService } from './services/configService.js'
 
 const PORT = process.env.PORT ?? 3008
 const START_TIME = Date.now()
+
+// ============= QR & CONNECTION STATE =============
+
+let qrImageBase64: string | null = null
+let connectionState: 'disconnected' | 'qr_ready' | 'connected' = 'disconnected'
+let connectedPhone: string | null = null
+
+const BOT_NAME = 'bot'
+const QR_FILE = path.join(process.cwd(), `${BOT_NAME}.qr.png`)
+
+/**
+ * Check the QR PNG file on disk and update state.
+ * The Baileys provider writes this file when a QR is generated.
+ */
+function syncQRFromFile() {
+    try {
+        if (fs.existsSync(QR_FILE)) {
+            const data = fs.readFileSync(QR_FILE)
+            qrImageBase64 = data.toString('base64')
+            if (connectionState !== 'connected') {
+                connectionState = 'qr_ready'
+            }
+        } else if (connectionState === 'qr_ready') {
+            // QR file removed after scan — likely connected now
+            qrImageBase64 = null
+        }
+    } catch {
+        // Ignore file read errors
+    }
+}
+
+// Poll QR file every 2 seconds as a safety net
+setInterval(syncQRFromFile, 2000)
 
 // ============= HELPER =============
 
@@ -96,13 +134,46 @@ const main = async () => {
     const adapterFlow = createFlow([resetFlow, aiFlow])
 
     const adapterProvider = createProvider(Provider, {
-        jwtToken: process.env.JWT_TOKEN || process.env.META_JWT_TOKEN || '',
-        numberId: process.env.NUMBER_ID || process.env.META_NUMBER_ID || '',
-        verifyToken: process.env.VERIFY_TOKEN || process.env.META_VERIFY_TOKEN || '',
-        version: process.env.VERSION || process.env.META_VERSION || 'v22.0',
+        name: BOT_NAME,
     })
 
     const adapterDB = new Database()
+
+    // Listen to provider events for QR and connection state
+    adapterProvider.on('require_action', (action: any) => {
+        console.log('\n[BAILEYS] Action required:', action.title)
+        if (action.instructions) {
+            action.instructions.forEach((i: string) => console.log(`  ${i}`))
+        }
+        if (action.payload?.qr) {
+            connectionState = 'qr_ready'
+            console.log('[BAILEYS] QR code generated - scan with WhatsApp')
+        }
+    })
+
+    adapterProvider.on('ready', () => {
+        connectionState = 'connected'
+        qrImageBase64 = null
+        // Clean up QR file
+        try { if (fs.existsSync(QR_FILE)) fs.unlinkSync(QR_FILE) } catch {}
+
+        // Get phone info from vendor
+        try {
+            const user = (adapterProvider as any).vendor?.user
+            if (user) {
+                connectedPhone = `${user.id}`.split(':').shift() || null
+                console.log(`[BAILEYS] Connected as: ${connectedPhone}`)
+            }
+        } catch {}
+
+        console.log('[BAILEYS] WhatsApp connected successfully!')
+    })
+
+    adapterProvider.on('auth_failure', (errors: string[]) => {
+        connectionState = 'disconnected'
+        qrImageBase64 = null
+        console.error('[BAILEYS] Auth failure:', errors)
+    })
 
     const { handleCtx, httpServer } = await createBot({
         flow: adapterFlow,
@@ -130,17 +201,39 @@ const main = async () => {
             status: 'ok',
             uptime: (Date.now() - START_TIME) / 1000,
             timestamp: new Date().toISOString(),
+            provider: 'baileys',
+            connection: connectionState,
+        })
+    })
+
+    // --- QR Code ---
+    server.get('/api/qr', (_req: any, res: any) => {
+        // Also sync from file in case event was missed
+        syncQRFromFile()
+        jsonResponse(res, {
+            qr: qrImageBase64,
+            status: connectionState,
         })
     })
 
     // --- Connection Status ---
     server.get('/api/connection-status', (_req: any, res: any) => {
-        const numberId = process.env.NUMBER_ID || process.env.META_NUMBER_ID || ''
+        // Double-check vendor state
+        try {
+            const vendor = (adapterProvider as any).vendor
+            if (vendor?.user && connectionState !== 'connected') {
+                connectionState = 'connected'
+                connectedPhone = `${vendor.user.id}`.split(':').shift() || null
+                qrImageBase64 = null
+            }
+        } catch {}
+
         jsonResponse(res, {
-            status: 'connected',
-            provider: 'meta',
+            status: connectionState,
+            provider: 'baileys',
             error: null,
-            number_id: numberId ? `...${numberId.slice(-4)}` : null,
+            phone: connectedPhone,
+            qr_available: qrImageBase64 !== null,
             timestamp: new Date().toISOString(),
         })
     })
@@ -295,22 +388,24 @@ const main = async () => {
     httpServer(+PORT)
 
     console.log('='.repeat(60))
-    console.log('  KARUNA BOT v3.0.0 (BuilderBot + Grok AI)')
+    console.log('  KARUNA BOT v3.1.0 (BuilderBot + Baileys + Grok AI)')
     console.log('='.repeat(60))
     console.log()
-    console.log('  META WHATSAPP:')
-    console.log(`    Provider: @builderbot/provider-meta`)
-    const numberId = process.env.NUMBER_ID || process.env.META_NUMBER_ID || ''
-    console.log(`    Number ID: ...${numberId.slice(-4) || 'NOT SET'}`)
-    console.log(`    Version: ${process.env.VERSION || process.env.META_VERSION || 'v22.0'}`)
+    console.log('  WHATSAPP:')
+    console.log(`    Provider: @builderbot/provider-baileys (QR Code)`)
+    console.log(`    Session: ./${BOT_NAME}_sessions/`)
+    console.log(`    QR File: ./${BOT_NAME}.qr.png`)
     console.log()
     console.log('  AI:')
     console.log(`    Grok AI: ${process.env.XAI_API_KEY ? 'OK' : 'NOT CONFIGURED'}`)
     console.log()
     console.log(`  SERVER:`)
     console.log(`    Port: ${PORT}`)
-    console.log(`    API Docs: http://localhost:${PORT}/health`)
+    console.log(`    Dashboard: http://localhost:${PORT}`)
+    console.log(`    Health: http://localhost:${PORT}/health`)
+    console.log(`    QR API: http://localhost:${PORT}/api/qr`)
     console.log()
+    console.log('  Scan the QR code with WhatsApp to connect.')
     console.log('='.repeat(60))
 }
 

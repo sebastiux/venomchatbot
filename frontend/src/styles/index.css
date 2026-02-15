@@ -120,3 +120,15 @@ body {
 .tab.active {
   @apply text-green-600 border-green-500;
 }
+
+/* QR Code */
+.qr-container {
+  @apply flex justify-center items-center p-4 bg-white rounded-xl border-2 border-green-200 mx-auto;
+  max-width: 280px;
+}
+
+.qr-image {
+  @apply w-full h-auto rounded-lg;
+  max-width: 240px;
+  image-rendering: pixelated;
+}
