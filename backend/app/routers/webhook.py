@@ -437,6 +437,163 @@ async def test_template(phone_number: str, template: str = "hello_world", lang: 
         return {"error": str(e)}
 
 
+@router.get("/message-status/{message_id}")
+async def check_message_status(message_id: str):
+    """Check delivery status of a sent message.
+
+    Use the wamid from /test-send or /test-template response.
+    Example: /message-status/wamid.HBgNNTIxNzIwMjUzMzM4OBUCABEYEjc0NzgxNURDM0IxRkEyOTdCNgA=
+    """
+    import httpx
+
+    settings = get_settings()
+    headers = {"Authorization": f"Bearer {settings.meta_jwt_token}"}
+
+    try:
+        async with httpx.AsyncClient() as client:
+            url = f"https://graph.facebook.com/{settings.meta_version}/{message_id}"
+            response = await client.get(url, headers=headers, timeout=15.0)
+            return {
+                "message_id": message_id,
+                "status_code": response.status_code,
+                "response": response.json() if "application/json" in response.headers.get("content-type", "") else response.text,
+            }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@router.get("/phone-info")
+async def phone_info():
+    """Get detailed info about the configured WhatsApp phone number.
+
+    Shows: display number, verified name, quality rating, status,
+    throughput limits, and whether it's a test or real number.
+    """
+    import httpx
+
+    settings = get_settings()
+    headers = {"Authorization": f"Bearer {settings.meta_jwt_token}"}
+
+    result = {}
+    try:
+        async with httpx.AsyncClient() as client:
+            # Get phone number details
+            url = f"https://graph.facebook.com/{settings.meta_version}/{settings.meta_number_id}"
+            params = {
+                "fields": "display_phone_number,verified_name,quality_rating,platform_type,"
+                          "status,name_status,is_official_business_account,throughput,"
+                          "code_verification_status,is_pin_enabled,messaging_limit_tier"
+            }
+            response = await client.get(url, headers=headers, params=params, timeout=15.0)
+
+            if response.status_code == 200:
+                data = response.json()
+                result["phone_number"] = data
+                display = data.get("display_phone_number", "")
+
+                # Detect test number
+                if "+1 555" in display or display.startswith("+1 555"):
+                    result["is_test_number"] = True
+                    result["warning"] = (
+                        "This is a META TEST number. Test numbers have restrictions: "
+                        "can only send to numbers added in WhatsApp > API Setup > 'To' field. "
+                        "Messages may show as 'accepted' but not deliver if recipient is not in the test list."
+                    )
+                else:
+                    result["is_test_number"] = False
+
+                # Check quality
+                quality = data.get("quality_rating")
+                if quality and quality != "GREEN":
+                    result["quality_warning"] = f"Quality rating is {quality}. RED or YELLOW may limit message delivery."
+
+                # Check messaging limits
+                tier = data.get("messaging_limit_tier")
+                if tier:
+                    result["messaging_limit_tier"] = tier
+
+            else:
+                result["error"] = response.json() if "application/json" in response.headers.get("content-type", "") else response.text
+                result["status_code"] = response.status_code
+
+    except Exception as e:
+        result["error"] = str(e)
+
+    return result
+
+
+@router.get("/test-send-raw/{phone_number}")
+async def test_send_raw(phone_number: str):
+    """Send a test message WITHOUT phone normalization.
+
+    This sends the number exactly as provided to test if the
+    normalization (521->52) is causing delivery issues.
+    """
+    import httpx
+
+    settings = get_settings()
+    # Only strip non-digits, NO normalization
+    raw_phone = ''.join(c for c in phone_number if c.isdigit())
+    normalized_phone = whatsapp_service.normalize_phone_number(phone_number)
+
+    url = f"https://graph.facebook.com/{settings.meta_version}/{settings.meta_number_id}/messages"
+    headers = {
+        "Authorization": f"Bearer {settings.meta_jwt_token}",
+        "Content-Type": "application/json"
+    }
+
+    results = {}
+
+    try:
+        async with httpx.AsyncClient() as client:
+            # Send with RAW number (no normalization)
+            payload_raw = {
+                "messaging_product": "whatsapp",
+                "recipient_type": "individual",
+                "to": raw_phone,
+                "type": "text",
+                "text": {"preview_url": False, "body": f"Test SIN normalizar - enviado a: {raw_phone}"}
+            }
+            resp_raw = await client.post(url, json=payload_raw, headers=headers, timeout=30.0)
+            results["raw_number"] = {
+                "phone": raw_phone,
+                "status_code": resp_raw.status_code,
+                "response": resp_raw.json() if "application/json" in resp_raw.headers.get("content-type", "") else resp_raw.text
+            }
+
+            # Send with NORMALIZED number
+            payload_norm = {
+                "messaging_product": "whatsapp",
+                "recipient_type": "individual",
+                "to": normalized_phone,
+                "type": "text",
+                "text": {"preview_url": False, "body": f"Test CON normalizar - enviado a: {normalized_phone}"}
+            }
+            resp_norm = await client.post(url, json=payload_norm, headers=headers, timeout=30.0)
+            results["normalized_number"] = {
+                "phone": normalized_phone,
+                "status_code": resp_norm.status_code,
+                "response": resp_norm.json() if "application/json" in resp_norm.headers.get("content-type", "") else resp_norm.text
+            }
+
+            # Compare
+            raw_waid = results["raw_number"].get("response", {}).get("contacts", [{}])[0].get("wa_id", "")
+            norm_waid = results["normalized_number"].get("response", {}).get("contacts", [{}])[0].get("wa_id", "")
+            results["comparison"] = {
+                "raw_input": raw_phone,
+                "normalized_input": normalized_phone,
+                "raw_wa_id": raw_waid,
+                "normalized_wa_id": norm_waid,
+                "wa_ids_match": raw_waid == norm_waid,
+                "note": "If both return 200 but neither arrives, the issue is on Meta's side (app mode, testing, or account status)"
+            }
+
+    except Exception as e:
+        results["error"] = str(e)
+
+    return results
+
+
 @router.post("/webhook")
 async def handle_webhook(request: Request, background_tasks: BackgroundTasks):
     """Handle incoming WhatsApp webhook - return 200 immediately, process in background."""
