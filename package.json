@@ -1,30 +1,25 @@
 {
   "name": "karuna-bot",
-  "version": "2.0.0",
-  "description": "WhatsApp Chatbot with Meta Business API - Python Backend + React Frontend",
+  "version": "3.0.0",
+  "description": "WhatsApp Chatbot with BuilderBot Meta Provider + Grok AI",
+  "main": "dist/app.js",
+  "type": "module",
   "private": true,
   "scripts": {
-    "dev": "cd backend && uvicorn app.main:app --reload --port 3008",
-    "dev:frontend": "cd frontend && npm run dev",
-    "build": "cd frontend && npm run build",
-    "start": "uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-3008}",
-    "install:all": "cd frontend && npm install && cd ../backend && pip install -r requirements.txt",
-    "docker:build": "docker build -t karuna-bot .",
-    "docker:run": "docker run -p 3008:3008 --env-file .env karuna-bot"
+    "start": "node dist/app.js",
+    "build": "tsc",
+    "dev": "tsx ./src/app.ts",
+    "dev:frontend": "cd frontend && npm run dev"
   },
-  "keywords": [
-    "whatsapp",
-    "bot",
-    "chatbot",
-    "grok",
-    "ai",
-    "meta",
-    "whatsapp-business-api",
-    "python",
-    "fastapi",
-    "react",
-    "typescript"
-  ],
-  "author": "",
-  "license": "ISC"
+  "dependencies": {
+    "@builderbot/bot": "1.2.9",
+    "@builderbot/provider-meta": "1.2.9",
+    "dotenv": "^17.2.1",
+    "openai": "^4.77.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "tsx": "^4.7.1",
+    "typescript": "^5.4.3"
+  }
 }

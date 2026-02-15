@@ -1,62 +1,50 @@
-# Multi-stage Dockerfile for Karuna Bot
-# Builds React frontend and Python backend
+# Multi-stage Dockerfile for Karuna Bot (BuilderBot + Grok AI)
 
-# ============= Stage 1: Build Frontend =============
-FROM node:20-alpine AS frontend-builder
-
-WORKDIR /app/frontend
-
-# Copy frontend package files
-COPY frontend/package*.json ./
-
-# Install dependencies
-RUN npm install
-
-# Copy frontend source
-COPY frontend/ ./
-
-# Build frontend
-RUN npm run build
-
-# ============= Stage 2: Production =============
-FROM python:3.11-slim
+# ============= Stage 1: Build =============
+FROM node:21-alpine3.18 as builder
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+RUN corepack enable && corepack prepare pnpm@latest --activate
+ENV PNPM_HOME=/usr/local/bin
 
-# Copy backend requirements and install
-COPY backend/requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+COPY package*.json *-lock.yaml ./
+COPY tsconfig.json ./
+COPY src/ ./src/
 
-# Copy backend code
-COPY backend/ ./backend/
+RUN apk add --no-cache --virtual .gyp \
+        python3 \
+        make \
+        g++ \
+    && apk add --no-cache git \
+    && pnpm install && pnpm run build \
+    && apk del .gyp
 
-# Copy built frontend from builder stage
-COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
+# ============= Stage 2: Production =============
+FROM node:21-alpine3.18 as deploy
 
-# Create non-root user
-RUN useradd -m -u 1000 appuser && \
-    mkdir -p /app/config && \
-    chown -R appuser:appuser /app
+WORKDIR /app
 
-USER appuser
-
-# Environment variables
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PORT=3008
-
-# Expose port
+ARG PORT
+ENV PORT $PORT
 EXPOSE $PORT
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:${PORT}/health || exit 1
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/*.json /app/*-lock.yaml ./
 
-# Start application
-CMD ["sh", "-c", "uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT}"]
+# Copy config directory if it exists
+COPY config/ ./config/
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+ENV PNPM_HOME=/usr/local/bin
+
+RUN npm cache clean --force && pnpm install --production --ignore-scripts \
+    && addgroup -g 1001 -S nodejs && adduser -S -u 1001 nodejs \
+    && mkdir -p /app/config && chown -R nodejs:nodejs /app \
+    && rm -rf $PNPM_HOME/.npm $PNPM_HOME/.node-gyp
+
+USER nodejs
+
+ENV PYTHONUNBUFFERED=1
+
+CMD ["npm", "start"]
