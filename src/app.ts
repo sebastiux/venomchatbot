@@ -95,10 +95,12 @@ app.post('/webhook', async (req, res) => {
         const text = payload.message?.text
         if (!text) return
 
-        // Maytapi puts chat ID in root "conversation" field (e.g. "number@c.us")
-        // and phone number in root "receiver" field (e.g. "5217202533388")
+        // Maytapi fields:
+        //   "conversation" = chat ID of the sender (e.g. "number@c.us")
+        //   "receiver"     = bot's own phone number (who received the webhook)
+        //   "user.phone"   = sender's phone number
         const conversation = payload.conversation || payload.message?.chatId || ''
-        const from = payload.receiver || conversation.split('@')[0]
+        const from = payload.user?.phone || conversation.split('@')[0]
         if (!from) return
 
         // Skip group messages (only handle private chats)

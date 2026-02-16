@@ -54,7 +54,7 @@ export interface WebhookPayload {
     }
     /** Chat identifier at root level, e.g. "5217202533388@c.us" */
     conversation?: string
-    /** Phone number without @c.us suffix */
+    /** Bot's own phone number (the one that received the message) */
     receiver?: string
     type?: string // 'message' | 'ack' | 'status' | 'error'
     reply?: string
