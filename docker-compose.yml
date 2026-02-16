@@ -1,19 +1,18 @@
 version: '3.8'
 
 services:
-  # Backend API service
-  backend:
+  # Combined single-container deployment (recommended)
+  karuna-bot:
     build:
-      context: ./backend
+      context: .
       dockerfile: Dockerfile
     ports:
-      - "${BACKEND_PORT:-3008}:3008"
+      - "${PORT:-3008}:3008"
     environment:
-      # Meta WhatsApp API
-      - META_JWT_TOKEN=${META_JWT_TOKEN}
-      - META_NUMBER_ID=${META_NUMBER_ID}
-      - META_VERIFY_TOKEN=${META_VERIFY_TOKEN}
-      - META_VERSION=${META_VERSION:-v21.0}
+      # Maytapi WhatsApp API
+      - MAYTAPI_PRODUCT_ID=${MAYTAPI_PRODUCT_ID}
+      - MAYTAPI_PHONE_ID=${MAYTAPI_PHONE_ID}
+      - MAYTAPI_API_TOKEN=${MAYTAPI_API_TOKEN}
       # Grok AI
       - XAI_API_KEY=${XAI_API_KEY}
       # Google Services
@@ -23,7 +22,6 @@ services:
       # Server
       - PORT=3008
       - ENVIRONMENT=production
-      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
     volumes:
       - ./config:/app/config
       - ./google-credentials.json:/app/google-credentials.json:ro
@@ -35,71 +33,25 @@ services:
       retries: 3
       start_period: 10s
 
-  # Frontend service (Nginx serving static React app)
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        - VITE_API_URL=${VITE_API_URL:-http://localhost:3008}
-    ports:
-      - "${FRONTEND_PORT:-3000}:80"
-    depends_on:
-      - backend
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # Combined single-container deployment (alternative)
-  # Use this for simpler deployments where you want everything in one container
-  karuna-bot-combined:
+# Development configuration
+# Run with: docker-compose --profile dev up
+  karuna-bot-dev:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "${PORT:-3008}:3008"
-    environment:
-      - META_JWT_TOKEN=${META_JWT_TOKEN}
-      - META_NUMBER_ID=${META_NUMBER_ID}
-      - META_VERIFY_TOKEN=${META_VERIFY_TOKEN}
-      - META_VERSION=${META_VERSION:-v21.0}
-      - XAI_API_KEY=${XAI_API_KEY}
-      - GOOGLE_SHEET_ID=${GOOGLE_SHEET_ID}
-      - MEET_LINK=${MEET_LINK}
-      - KARUNA_EMAIL=${KARUNA_EMAIL}
-      - PORT=3008
-      - ENVIRONMENT=production
-    volumes:
-      - ./config:/app/config
-      - ./google-credentials.json:/app/google-credentials.json:ro
-    restart: unless-stopped
-    profiles:
-      - combined
-
-# Development configuration
-# Run with: docker-compose --profile dev up
-  backend-dev:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    ports:
       - "3008:3008"
     volumes:
-      - ./backend:/app/backend
       - ./config:/app/config
     environment:
-      - META_JWT_TOKEN=${META_JWT_TOKEN}
-      - META_NUMBER_ID=${META_NUMBER_ID}
-      - META_VERIFY_TOKEN=${META_VERIFY_TOKEN}
+      - MAYTAPI_PRODUCT_ID=${MAYTAPI_PRODUCT_ID}
+      - MAYTAPI_PHONE_ID=${MAYTAPI_PHONE_ID}
+      - MAYTAPI_API_TOKEN=${MAYTAPI_API_TOKEN}
       - XAI_API_KEY=${XAI_API_KEY}
       - GOOGLE_SHEET_ID=${GOOGLE_SHEET_ID}
       - MEET_LINK=${MEET_LINK}
       - KARUNA_EMAIL=${KARUNA_EMAIL}
       - PORT=3008
-    command: uvicorn backend.app.main:app --host 0.0.0.0 --port 3008 --reload
     profiles:
       - dev
 

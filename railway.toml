@@ -1,8 +1,5 @@
-# Railway Configuration for Karuna Bot (Baileys + Grok AI)
+# Railway Configuration for Karuna Bot (Maytapi WhatsApp API + Grok AI)
 # https://docs.railway.app/reference/config-as-code
-#
-# IMPORTANT: Attach a Railway Volume mounted at /app/bot_sessions
-# to persist WhatsApp sessions across deploys (avoids re-scanning QR).
 
 [build]
 builder = "dockerfile"

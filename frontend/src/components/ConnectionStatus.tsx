@@ -28,8 +28,8 @@ export default function ConnectionStatus() {
     };
 
     fetchAll();
-    // Poll every 3 seconds (faster for QR updates)
-    const interval = setInterval(fetchAll, 3000);
+    // Poll every 5 seconds
+    const interval = setInterval(fetchAll, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -64,7 +64,7 @@ export default function ConnectionStatus() {
       );
     }
 
-    // Show QR code when available
+    // Show QR code when available (from Maytapi getQrCode)
     if ((status.status === 'qr_ready' || status.status === 'disconnected') && qrData) {
       return (
         <div className="text-center py-4">
@@ -80,19 +80,29 @@ export default function ConnectionStatus() {
             Abre WhatsApp en tu telefono &gt; Dispositivos vinculados &gt; Vincular dispositivo
           </p>
           <p className="text-xs text-gray-400">
-            El QR se actualiza automaticamente cada minuto
+            QR gestionado por Maytapi
           </p>
         </div>
       );
     }
 
-    // Waiting for QR
+    // Disconnected without QR
     if (status.status === 'disconnected' && !qrData) {
       return (
         <div className="flex flex-col items-center py-8">
-          <div className="spinner" />
-          <p className="mt-4 text-gray-500">Generando codigo QR...</p>
-          <p className="text-xs text-gray-400 mt-2">Esperando conexion con WhatsApp</p>
+          <div className="text-5xl text-yellow-500 mb-4">&#x25CF;</div>
+          <h3 className="text-lg font-semibold mb-2">Telefono desconectado</h3>
+          <p className="text-gray-500 text-sm">
+            Verifica la conexion del telefono en el panel de Maytapi
+          </p>
+          <a
+            href="https://console.maytapi.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 text-sm text-blue-600 hover:text-blue-800 underline"
+          >
+            Abrir consola Maytapi
+          </a>
         </div>
       );
     }
@@ -106,7 +116,7 @@ export default function ConnectionStatus() {
           <p className="text-gray-500 mb-4">El bot esta activo y listo para recibir mensajes.</p>
           <div className="bg-gray-50 rounded-lg p-3 inline-block">
             <p className="text-sm text-gray-600">
-              <strong>Provider:</strong> Baileys (WhatsApp Web)
+              <strong>Provider:</strong> Maytapi API
             </p>
             {status.phone && (
               <p className="text-sm text-gray-600">
