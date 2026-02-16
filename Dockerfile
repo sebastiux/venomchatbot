@@ -16,6 +16,7 @@ RUN apk add --no-cache --virtual .gyp \
         python3 \
         make \
         g++ \
+        git \
     && pnpm install && pnpm run build \
     && apk del .gyp
 
