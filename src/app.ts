@@ -86,22 +86,24 @@ app.post('/webhook', async (req, res) => {
     res.json({ success: true })
 
     try {
+        console.log(`[WEBHOOK] type=${payload.type} fromMe=${payload.message?.fromMe} conversation=${payload.conversation} receiver=${payload.receiver} msgType=${payload.message?.type} text="${payload.message?.text?.substring(0, 50) || ''}"`)
+
         // Only process incoming text messages (not from ourselves)
         if (payload.message?.fromMe) return
         if (payload.type && payload.type !== 'message') return
 
         const text = payload.message?.text
-        const chatId = payload.message?.chatId || ''
+        if (!text) return
 
-        if (!text || !chatId) return
-
-        // Extract phone number from chatId (format: "number@c.us" or "number@g.us")
-        const from = chatId.split('@')[0]
+        // Maytapi puts chat ID in root "conversation" field (e.g. "number@c.us")
+        // and phone number in root "receiver" field (e.g. "5217202533388")
+        const conversation = payload.conversation || payload.message?.chatId || ''
+        const from = payload.receiver || conversation.split('@')[0]
         if (!from) return
 
         // Skip group messages (only handle private chats)
-        if (chatId.endsWith('@g.us')) {
-            console.log(`[WEBHOOK] Skipping group message from ${chatId}`)
+        if (conversation.endsWith('@g.us')) {
+            console.log(`[WEBHOOK] Skipping group message from ${conversation}`)
             return
         }
 

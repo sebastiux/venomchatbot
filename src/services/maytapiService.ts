@@ -37,6 +37,8 @@ export interface MaytapiMessage {
 export interface WebhookPayload {
     product_id?: string
     phone_id?: string
+    productId?: string
+    phoneId?: number
     message?: {
         id?: string
         type?: string
@@ -50,9 +52,13 @@ export interface WebhookPayload {
         name?: string
         phone?: string
     }
+    /** Chat identifier at root level, e.g. "5217202533388@c.us" */
     conversation?: string
+    /** Phone number without @c.us suffix */
     receiver?: string
     type?: string // 'message' | 'ack' | 'status' | 'error'
+    reply?: string
+    timestamp?: number
 }
 
 class MaytapiService {
