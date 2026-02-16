@@ -137,12 +137,19 @@ app.get('/api/qr', async (_req, res) => {
     }
 
     try {
+        // First check if phone is already connected
+        const statusData = await maytapiService.getStatus()
+        const phoneStatus = statusData?.status || statusData
+        if (phoneStatus?.loggedIn === true) {
+            return res.json({ qr: null, status: 'connected' })
+        }
+
+        // Phone not connected — try to get QR
         const result = await maytapiService.getQrCode()
         if (result.success && result.qr) {
             return res.json({ qr: result.qr, status: 'qr_ready' })
         }
-        // No QR means phone is likely already connected
-        return res.json({ qr: null, status: 'connected' })
+        return res.json({ qr: null, status: 'disconnected' })
     } catch (err: any) {
         return res.json({ qr: null, status: 'disconnected', error: err.message })
     }
@@ -162,17 +169,25 @@ app.get('/api/connection-status', async (_req, res) => {
     }
 
     try {
-        const status = await maytapiService.getStatus()
-        const isConnected = status?.status === 'active' || status?.connection === 'connected'
+        const data = await maytapiService.getStatus()
+
+        // Maytapi returns: { success: true, status: { loggedIn: true, isQr: false, ... } }
+        const phoneStatus = data?.status || data
+        const isConnected = phoneStatus?.loggedIn === true
+        const isQr = phoneStatus?.isQr === true
+
+        let connStatus: 'connected' | 'qr_ready' | 'disconnected' = 'disconnected'
+        if (isConnected) connStatus = 'connected'
+        else if (isQr) connStatus = 'qr_ready'
 
         return res.json({
-            status: isConnected ? 'connected' : 'disconnected',
+            status: connStatus,
             provider: 'maytapi',
             error: null,
-            phone: status?.number || status?.phone || null,
-            qr_available: !isConnected,
+            phone: data?.number || phoneStatus?.number || null,
+            qr_available: isQr,
             timestamp: new Date().toISOString(),
-            maytapi_details: status,
+            maytapi_details: data,
         })
     } catch (err: any) {
         return res.json({
