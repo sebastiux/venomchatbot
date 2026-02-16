@@ -53,8 +53,8 @@ async function testProxyConnectivity(proxyUrl: string): Promise<void> {
 
     // Test 2: WebSocket connection (what Baileys actually uses)
     try {
-        // Use require to avoid needing @types/ws
-        const WS = require('ws') as any
+        // Dynamic import to avoid needing @types/ws (ESM compatible)
+        const { default: WS } = await import('ws')
         const result = await new Promise<string>((resolve, reject) => {
             const timer = setTimeout(() => reject(new Error('Timeout (15s)')), 15_000)
             const ws = new WS('wss://web.whatsapp.com/ws/chat', {
