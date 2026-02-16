@@ -13,11 +13,14 @@ import { BaileysProvider as Provider } from '@builderbot/provider-baileys'
 import fs from 'fs'
 import path from 'path'
 import 'dotenv/config'
+import { HttpsProxyAgent } from 'https-proxy-agent'
+import { SocksProxyAgent } from 'socks-proxy-agent'
 
 import { grokService } from './services/grokService.js'
 import { configService } from './services/configService.js'
 
 const PORT = process.env.PORT ?? 3008
+const PROXY_URL = process.env.PROXY_URL
 const START_TIME = Date.now()
 
 // ============= QR & CONNECTION STATE =============
@@ -133,9 +136,18 @@ const aiFlow = addKeyword<Provider, Database>(EVENTS.WELCOME)
 const main = async () => {
     const adapterFlow = createFlow([resetFlow, aiFlow])
 
-    const adapterProvider = createProvider(Provider, {
-        name: BOT_NAME,
-    })
+    // Configure proxy agent for Baileys (bypasses datacenter IP blocks)
+    const providerOptions: any = { name: BOT_NAME }
+    if (PROXY_URL) {
+        const agent = PROXY_URL.startsWith('socks')
+            ? new SocksProxyAgent(PROXY_URL)
+            : new HttpsProxyAgent(PROXY_URL)
+        providerOptions.agent = agent
+        providerOptions.fetchAgent = agent
+        console.log(`[PROXY] Routing WhatsApp connection through proxy`)
+    }
+
+    const adapterProvider = createProvider(Provider, providerOptions)
 
     const adapterDB = new Database()
 

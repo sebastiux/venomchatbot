@@ -16,7 +16,9 @@
     "@builderbot/provider-baileys": "^1.2.9",
     "@builderbot/provider-meta": "1.2.9",
     "dotenv": "^17.2.1",
-    "openai": "^4.77.0"
+    "https-proxy-agent": "^7.0.0",
+    "openai": "^4.77.0",
+    "socks-proxy-agent": "^8.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.30",
