@@ -13,8 +13,10 @@ import { BaileysProvider as Provider } from '@builderbot/provider-baileys'
 import fs from 'fs'
 import path from 'path'
 import 'dotenv/config'
+import https from 'https'
 import { HttpsProxyAgent } from 'https-proxy-agent'
 import { SocksProxyAgent } from 'socks-proxy-agent'
+import WebSocket from 'ws'
 
 import { grokService } from './services/grokService.js'
 import { configService } from './services/configService.js'
@@ -22,6 +24,66 @@ import { configService } from './services/configService.js'
 const PORT = process.env.PORT ?? 3008
 const PROXY_URL = process.env.PROXY_URL
 const START_TIME = Date.now()
+
+/**
+ * Test proxy connectivity before starting the bot.
+ * Runs 2 tests: HTTPS request + WebSocket to WhatsApp.
+ */
+async function testProxyConnectivity(proxyUrl: string): Promise<void> {
+    const agent = proxyUrl.startsWith('socks')
+        ? new SocksProxyAgent(proxyUrl)
+        : new HttpsProxyAgent(proxyUrl)
+
+    const masked = proxyUrl.replace(/:[^:@]+@/, ':****@')
+    console.log(`[PROXY-TEST] Testing proxy: ${masked}`)
+
+    // Test 1: HTTPS request through proxy
+    try {
+        const result = await new Promise<string>((resolve, reject) => {
+            const timer = setTimeout(() => reject(new Error('Timeout (10s)')), 10_000)
+            const req = https.get('https://web.whatsapp.com', { agent }, (res) => {
+                clearTimeout(timer)
+                resolve(`HTTP ${res.statusCode}`)
+            })
+            req.on('error', (err) => { clearTimeout(timer); reject(err) })
+        })
+        console.log(`[PROXY-TEST] HTTPS to web.whatsapp.com: ${result}`)
+    } catch (err: any) {
+        console.error(`[PROXY-TEST] HTTPS FAILED: ${err.message}`)
+    }
+
+    // Test 2: WebSocket connection (what Baileys actually uses)
+    try {
+        const result = await new Promise<string>((resolve, reject) => {
+            const timer = setTimeout(() => reject(new Error('Timeout (15s)')), 15_000)
+            const ws = new WebSocket('wss://web.whatsapp.com/ws/chat', {
+                origin: 'https://web.whatsapp.com',
+                handshakeTimeout: 12_000,
+                agent,
+            })
+            ws.on('open', () => {
+                clearTimeout(timer)
+                ws.close()
+                resolve('CONNECTED')
+            })
+            ws.on('upgrade', (res: any) => {
+                console.log(`[PROXY-TEST] WS upgrade response: ${res.statusCode}`)
+            })
+            ws.on('unexpected-response', (_req: any, res: any) => {
+                clearTimeout(timer)
+                ws.close()
+                resolve(`WS rejected: HTTP ${res.statusCode}`)
+            })
+            ws.on('error', (err: any) => {
+                clearTimeout(timer)
+                reject(err)
+            })
+        })
+        console.log(`[PROXY-TEST] WebSocket to WhatsApp: ${result}`)
+    } catch (err: any) {
+        console.error(`[PROXY-TEST] WebSocket FAILED: ${err.message}`)
+    }
+}
 
 // ============= QR & CONNECTION STATE =============
 
@@ -136,15 +198,23 @@ const aiFlow = addKeyword<Provider, Database>(EVENTS.WELCOME)
 // Catch unhandled errors from Baileys/proxy for diagnostics
 process.on('unhandledRejection', (reason: any) => {
     const msg = reason?.message || String(reason)
+    const stack = reason?.stack || ''
     // Filter out noise, only log connection-related errors
     if (msg.includes('Connection') || msg.includes('proxy') || msg.includes('ECONNREFUSED') ||
         msg.includes('ETIMEDOUT') || msg.includes('ENOTFOUND') || msg.includes('socket') ||
-        msg.includes('WebSocket') || msg.includes('tunneling')) {
+        msg.includes('WebSocket') || msg.includes('tunneling') || msg.includes('SOCKS') ||
+        msg.includes('Boom') || msg.includes('timed out') || msg.includes('handshake')) {
         console.error(`[CONNECTION ERROR] ${msg}`)
+        if (stack && !stack.includes(msg)) console.error(`[STACK] ${stack.split('\n').slice(0,3).join(' | ')}`)
     }
 })
 
 const main = async () => {
+    // Run proxy connectivity test before starting bot
+    if (PROXY_URL) {
+        await testProxyConnectivity(PROXY_URL)
+    }
+
     const adapterFlow = createFlow([resetFlow, aiFlow])
 
     // Configure proxy agent for Baileys (bypasses datacenter IP blocks)
