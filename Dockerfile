@@ -1,4 +1,4 @@
-# Multi-stage Dockerfile for Karuna Bot (BuilderBot + Grok AI)
+# Multi-stage Dockerfile for Karuna Bot (BuilderBot + Baileys + Grok AI)
 
 # ============= Stage 1: Build =============
 FROM node:21-alpine3.18 as builder
@@ -40,11 +40,9 @@ ENV PNPM_HOME=/usr/local/bin
 
 RUN npm cache clean --force && pnpm install --production --ignore-scripts \
     && addgroup -g 1001 -S nodejs && adduser -S -u 1001 nodejs \
-    && mkdir -p /app/config && chown -R nodejs:nodejs /app \
+    && mkdir -p /app/config /app/bot_sessions && chown -R nodejs:nodejs /app \
     && rm -rf $PNPM_HOME/.npm $PNPM_HOME/.node-gyp
 
 USER nodejs
-
-ENV PYTHONUNBUFFERED=1
 
 CMD ["npm", "start"]

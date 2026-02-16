@@ -1,14 +1,13 @@
-# Railway Configuration for Karuna Bot Backend
+# Railway Configuration for Karuna Bot (Baileys + Grok AI)
 # https://docs.railway.app/reference/config-as-code
 #
-# For separate frontend/backend deployment:
-# - Backend: Use this config (in main project)
-# - Frontend: Create new Railway service from frontend/ directory
+# IMPORTANT: Attach a Railway Volume mounted at /app/bot_sessions
+# to persist WhatsApp sessions across deploys (avoids re-scanning QR).
 
 [build]
 builder = "dockerfile"
-dockerfilePath = "backend/Dockerfile"
-watchPatterns = ["backend/**"]
+dockerfilePath = "Dockerfile"
+watchPatterns = ["src/**", "package.json"]
 
 [deploy]
 healthcheckPath = "/health"
