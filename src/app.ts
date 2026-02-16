@@ -53,7 +53,8 @@ async function testProxyConnectivity(proxyUrl: string): Promise<void> {
 
     // Test 2: WebSocket connection (what Baileys actually uses)
     try {
-        // Dynamic import to avoid needing @types/ws (ESM compatible)
+        // Dynamic import (ESM compatible, ws ships as transitive dep of baileys)
+        // @ts-ignore - ws has no type declarations installed
         const { default: WS } = await import('ws')
         const result = await new Promise<string>((resolve, reject) => {
             const timer = setTimeout(() => reject(new Error('Timeout (15s)')), 15_000)
