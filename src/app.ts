@@ -16,7 +16,6 @@ import 'dotenv/config'
 import https from 'https'
 import { HttpsProxyAgent } from 'https-proxy-agent'
 import { SocksProxyAgent } from 'socks-proxy-agent'
-import WebSocket from 'ws'
 
 import { grokService } from './services/grokService.js'
 import { configService } from './services/configService.js'
@@ -54,9 +53,11 @@ async function testProxyConnectivity(proxyUrl: string): Promise<void> {
 
     // Test 2: WebSocket connection (what Baileys actually uses)
     try {
+        // Use require to avoid needing @types/ws
+        const WS = require('ws') as any
         const result = await new Promise<string>((resolve, reject) => {
             const timer = setTimeout(() => reject(new Error('Timeout (15s)')), 15_000)
-            const ws = new WebSocket('wss://web.whatsapp.com/ws/chat', {
+            const ws = new WS('wss://web.whatsapp.com/ws/chat', {
                 origin: 'https://web.whatsapp.com',
                 handshakeTimeout: 12_000,
                 agent,
