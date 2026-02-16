@@ -383,6 +383,61 @@ const main = async () => {
         })
     )
 
+    // ============= STATIC FRONTEND =============
+
+    const STATIC_DIR = path.join(process.cwd(), 'public')
+    const MIME_TYPES: Record<string, string> = {
+        '.html': 'text/html',
+        '.js': 'application/javascript',
+        '.css': 'text/css',
+        '.json': 'application/json',
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.svg': 'image/svg+xml',
+        '.ico': 'image/x-icon',
+        '.woff': 'font/woff',
+        '.woff2': 'font/woff2',
+    }
+
+    server.use((req: any, res: any, next: Function) => {
+        if (req.method !== 'GET') return next()
+
+        const urlPath = (req.url || '/').split('?')[0]
+
+        // Skip API and backend routes
+        if (urlPath.startsWith('/api/') || urlPath === '/health' || urlPath.startsWith('/v1/')) {
+            return next()
+        }
+
+        const indexFile = path.join(STATIC_DIR, 'index.html')
+        if (!fs.existsSync(indexFile)) return next()
+
+        // Serve root as index.html
+        if (urlPath === '/') {
+            const content = fs.readFileSync(indexFile)
+            res.writeHead(200, { 'Content-Type': 'text/html' })
+            res.end(content)
+            return
+        }
+
+        // Try to serve exact static file
+        const filePath = path.resolve(path.join(STATIC_DIR, urlPath))
+        if (filePath.startsWith(STATIC_DIR) && fs.existsSync(filePath)) {
+            try {
+                const stat = fs.statSync(filePath)
+                if (stat.isFile()) {
+                    const ext = path.extname(filePath).toLowerCase()
+                    const content = fs.readFileSync(filePath)
+                    res.writeHead(200, { 'Content-Type': MIME_TYPES[ext] || 'application/octet-stream' })
+                    res.end(content)
+                    return
+                }
+            } catch {}
+        }
+
+        next()
+    })
+
     // ============= START SERVER =============
 
     httpServer(+PORT)

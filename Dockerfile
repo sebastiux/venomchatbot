@@ -1,7 +1,17 @@
 # Multi-stage Dockerfile for Karuna Bot (BuilderBot + Baileys + Grok AI)
 
-# ============= Stage 1: Build =============
-FROM node:21-alpine3.18 as builder
+# ============= Stage 1: Build Frontend =============
+FROM node:21-alpine3.18 AS frontend
+
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm install
+COPY frontend/ .
+ENV VITE_API_URL=
+RUN npm run build
+
+# ============= Stage 2: Build Backend =============
+FROM node:21-alpine3.18 AS builder
 
 WORKDIR /app
 
@@ -20,17 +30,18 @@ RUN apk add --no-cache --virtual .gyp \
     && pnpm install && pnpm run build \
     && apk del .gyp
 
-# ============= Stage 2: Production =============
-FROM node:21-alpine3.18 as deploy
+# ============= Stage 3: Production =============
+FROM node:21-alpine3.18 AS deploy
 
 WORKDIR /app
 
 ARG PORT
-ENV PORT $PORT
+ENV PORT=$PORT
 EXPOSE $PORT
 
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/*.json /app/*-lock.yaml ./
+COPY --from=frontend /app/frontend/dist ./public
 
 # Copy config directory if it exists
 COPY config/ ./config/
