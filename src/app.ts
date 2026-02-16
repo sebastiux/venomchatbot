@@ -217,14 +217,25 @@ const main = async () => {
         qrImageBase64 = null
         console.error('[BAILEYS] Auth failure:', errors)
 
-        // Clear stale session so next restart generates a fresh QR
+        // Clear stale session so next attempt generates a fresh QR
         const sessionDir = path.join(process.cwd(), `${BOT_NAME}_sessions`)
         try {
             fs.rmSync(sessionDir, { recursive: true, force: true })
-            console.log('[BAILEYS] Cleared stale session, restarting...')
+            console.log('[BAILEYS] Cleared stale session')
         } catch {}
-        // Exit so Railway restarts the container with a clean session
-        setTimeout(() => process.exit(1), 2000)
+
+        // Check if this is a connection rejection (405) vs actual auth issue
+        const isConnectionBlock = errors?.some(e => e.includes('405') || e.includes('Connection Failure'))
+        if (isConnectionBlock) {
+            console.error('[BAILEYS] WhatsApp rejected connection (IP blocked).')
+            console.error('[BAILEYS] A residential proxy (SOCKS5) is required.')
+            console.error('[BAILEYS] Server stays alive for dashboard access.')
+            // Don't exit - keep the server running for the frontend
+        } else {
+            // Actual auth failure (bad session, logged out, etc.) - restart
+            console.log('[BAILEYS] Restarting to generate fresh QR...')
+            setTimeout(() => process.exit(1), 2000)
+        }
     })
 
     const { handleCtx, httpServer } = await createBot({
