@@ -173,6 +173,15 @@ const main = async () => {
         connectionState = 'disconnected'
         qrImageBase64 = null
         console.error('[BAILEYS] Auth failure:', errors)
+
+        // Clear stale session so next restart generates a fresh QR
+        const sessionDir = path.join(process.cwd(), `${BOT_NAME}_sessions`)
+        try {
+            fs.rmSync(sessionDir, { recursive: true, force: true })
+            console.log('[BAILEYS] Cleared stale session, restarting...')
+        } catch {}
+        // Exit so Railway restarts the container with a clean session
+        setTimeout(() => process.exit(1), 2000)
     })
 
     const { handleCtx, httpServer } = await createBot({
