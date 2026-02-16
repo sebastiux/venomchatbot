@@ -133,6 +133,17 @@ const aiFlow = addKeyword<Provider, Database>(EVENTS.WELCOME)
 
 // ============= MAIN =============
 
+// Catch unhandled errors from Baileys/proxy for diagnostics
+process.on('unhandledRejection', (reason: any) => {
+    const msg = reason?.message || String(reason)
+    // Filter out noise, only log connection-related errors
+    if (msg.includes('Connection') || msg.includes('proxy') || msg.includes('ECONNREFUSED') ||
+        msg.includes('ETIMEDOUT') || msg.includes('ENOTFOUND') || msg.includes('socket') ||
+        msg.includes('WebSocket') || msg.includes('tunneling')) {
+        console.error(`[CONNECTION ERROR] ${msg}`)
+    }
+})
+
 const main = async () => {
     const adapterFlow = createFlow([resetFlow, aiFlow])
 
@@ -151,6 +162,25 @@ const main = async () => {
 
     const adapterDB = new Database()
 
+    // Diagnostic: detect if QR was never generated (proxy/connection issue)
+    const startupTime = Date.now()
+    let qrGenerated = false
+    const CONNECTION_DIAG_TIMEOUT = 30_000 // 30 seconds
+
+    setTimeout(() => {
+        if (!qrGenerated && connectionState === 'disconnected') {
+            console.error('\n' + '!'.repeat(60))
+            console.error('  [DIAGNOSTIC] No QR code generated after 30 seconds!')
+            console.error('  This usually means the WebSocket connection to WhatsApp failed.')
+            if (PROXY_URL) {
+                console.error('  PROXY is configured - the proxy may not support WebSocket connections.')
+                console.error('  Try removing PROXY_URL to test without proxy.')
+                console.error(`  Current proxy: ${PROXY_URL.replace(/:[^:@]+@/, ':****@')}`)
+            }
+            console.error('!'.repeat(60) + '\n')
+        }
+    }, CONNECTION_DIAG_TIMEOUT)
+
     // Listen to provider events for QR and connection state
     adapterProvider.on('require_action', (action: any) => {
         console.log('\n[BAILEYS] Action required:', action.title)
@@ -159,6 +189,7 @@ const main = async () => {
         }
         if (action.payload?.qr) {
             connectionState = 'qr_ready'
+            qrGenerated = true
             console.log('[BAILEYS] QR code generated - scan with WhatsApp')
         }
     })
