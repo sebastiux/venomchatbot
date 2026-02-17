@@ -1,10 +1,24 @@
 /**
  * Configuration service for managing bot settings (flows, blacklist, prompts).
- * Persists to JSON file, same behavior as the Python version.
+ *
+ * Storage priority:
+ *   1. Redis (persistent across deploys)  — when REDIS_URL is set
+ *   2. JSON file (ephemeral on Railway)   — always used as fallback
+ *
+ * On startup, if Redis is empty the JSON file seeds it automatically.
  */
 import * as fs from 'fs'
 import * as path from 'path'
 import { FLOW_PROMPTS, type FlowPrompt, type MenuConfig } from '../config/flowPrompts.js'
+import { redisService } from './redisService.js'
+
+// Redis keys
+const R = {
+    BLACKLIST: 'bot:blacklist',
+    CURRENT_FLOW: 'bot:currentFlow',
+    SYSTEM_PROMPT: 'bot:systemPrompt',
+    CUSTOM_FLOWS: 'bot:customFlows',
+}
 
 interface BotConfig {
     blacklist: string[]
@@ -21,10 +35,46 @@ class ConfigService {
         this.ensureConfigFile()
     }
 
+    // ============= Init =============
+
+    /** Seed Redis from JSON file if Redis is empty (first deploy) */
+    async seedRedis(): Promise<void> {
+        if (!redisService.isConnected) return
+
+        const existing = await redisService.get(R.CURRENT_FLOW)
+        if (existing) {
+            console.log('[CONFIG] Redis already seeded — skipping')
+            return
+        }
+
+        console.log('[CONFIG] Seeding Redis from JSON file...')
+        const config = this.getFileConfig()
+
+        // Blacklist
+        for (const num of config.blacklist) {
+            await redisService.sAdd(R.BLACKLIST, this.normalizeNumber(num))
+        }
+
+        // Prompt & flow
+        await redisService.set(R.CURRENT_FLOW, config.currentFlow || 'karuna')
+        await redisService.set(R.SYSTEM_PROMPT, config.systemPrompt || FLOW_PROMPTS.karuna.prompt)
+
+        // Custom flows
+        if (Object.keys(config.customFlows).length > 0) {
+            await redisService.set(R.CUSTOM_FLOWS, JSON.stringify(config.customFlows))
+        }
+
+        console.log('[CONFIG] Redis seeded successfully')
+    }
+
+    // ============= Helpers =============
+
     /** Strip everything except digits from a phone number */
     private normalizeNumber(number: string): string {
         return number.replace(/\D/g, '')
     }
+
+    // ---- JSON file helpers (fallback) ----
 
     private ensureConfigFile(): void {
         try {
@@ -39,7 +89,7 @@ class ConfigService {
                     systemPrompt: FLOW_PROMPTS.karuna.prompt,
                     customFlows: {},
                 }
-                this.saveConfig(defaultConfig)
+                this.saveFileConfig(defaultConfig)
                 console.log('Config file created')
             }
         } catch (e) {
@@ -47,7 +97,7 @@ class ConfigService {
         }
     }
 
-    private getConfig(): BotConfig {
+    private getFileConfig(): BotConfig {
         try {
             const data = fs.readFileSync(this.configPath, 'utf-8')
             return JSON.parse(data)
@@ -61,7 +111,7 @@ class ConfigService {
         }
     }
 
-    private saveConfig(config: BotConfig): boolean {
+    private saveFileConfig(config: BotConfig): boolean {
         try {
             fs.writeFileSync(this.configPath, JSON.stringify(config, null, 2), 'utf-8')
             return true
@@ -73,72 +123,125 @@ class ConfigService {
 
     // ============= Blacklist =============
 
-    /** Numbers from the BLACKLIST_NUMBERS env var (persist across deploys) */
-    private getEnvBlacklist(): string[] {
+    async getBlacklist(): Promise<string[]> {
+        if (redisService.isConnected) {
+            return redisService.sMembers(R.BLACKLIST)
+        }
+        // Fallback: file + env
+        const fromFile = (this.getFileConfig().blacklist || []).map((n) => this.normalizeNumber(n))
         const envVal = process.env.BLACKLIST_NUMBERS || ''
-        if (!envVal.trim()) return []
-        return envVal.split(',').map((n) => this.normalizeNumber(n)).filter(Boolean)
-    }
-
-    /** All blocked numbers: env var + config file (deduplicated) */
-    getBlacklist(): string[] {
-        const fromFile = (this.getConfig().blacklist || []).map((n) => this.normalizeNumber(n))
-        const fromEnv = this.getEnvBlacklist()
+        const fromEnv = envVal.trim() ? envVal.split(',').map((n) => this.normalizeNumber(n)).filter(Boolean) : []
         return [...new Set([...fromEnv, ...fromFile])]
     }
 
-    addToBlacklist(number: string): boolean {
+    async addToBlacklist(number: string): Promise<boolean> {
         const normalized = this.normalizeNumber(number)
         if (!normalized) return false
-        const config = this.getConfig()
+
+        if (redisService.isConnected) {
+            const added = await redisService.sAdd(R.BLACKLIST, normalized)
+            if (added) console.log(`Number ${normalized} added to blacklist (Redis)`)
+            return added
+        }
+
+        // Fallback: file
+        const config = this.getFileConfig()
         const existing = config.blacklist.map((n) => this.normalizeNumber(n))
         if (!existing.includes(normalized)) {
             config.blacklist.push(normalized)
-            this.saveConfig(config)
-            console.log(`Number ${normalized} added to blacklist`)
+            this.saveFileConfig(config)
+            console.log(`Number ${normalized} added to blacklist (file)`)
             return true
         }
         return false
     }
 
-    removeFromBlacklist(number: string): boolean {
+    async removeFromBlacklist(number: string): Promise<boolean> {
         const normalized = this.normalizeNumber(number)
-        const config = this.getConfig()
+
+        if (redisService.isConnected) {
+            await redisService.sRem(R.BLACKLIST, normalized)
+            console.log(`Number ${normalized} removed from blacklist (Redis)`)
+            return true
+        }
+
+        // Fallback: file
+        const config = this.getFileConfig()
         config.blacklist = config.blacklist.filter((n) => this.normalizeNumber(n) !== normalized)
-        this.saveConfig(config)
-        console.log(`Number ${normalized} removed from blacklist`)
+        this.saveFileConfig(config)
+        console.log(`Number ${normalized} removed from blacklist (file)`)
         return true
     }
 
-    isBlacklisted(number: string): boolean {
+    async isBlacklisted(number: string): Promise<boolean> {
         const normalized = this.normalizeNumber(number)
         if (!normalized) return false
-        return this.getBlacklist().includes(normalized)
+
+        if (redisService.isConnected) {
+            return redisService.sIsMember(R.BLACKLIST, normalized)
+        }
+
+        // Fallback: file + env
+        const list = await this.getBlacklist()
+        return list.includes(normalized)
     }
 
     // ============= System Prompt =============
 
-    getSystemPrompt(): string {
-        return this.getConfig().systemPrompt || ''
+    async getSystemPrompt(): Promise<string> {
+        if (redisService.isConnected) {
+            const prompt = await redisService.get(R.SYSTEM_PROMPT)
+            if (prompt !== null) return prompt
+        }
+        return this.getFileConfig().systemPrompt || ''
     }
 
-    updateSystemPrompt(prompt: string): boolean {
-        const config = this.getConfig()
+    async updateSystemPrompt(prompt: string): Promise<boolean> {
+        if (redisService.isConnected) {
+            await redisService.set(R.SYSTEM_PROMPT, prompt)
+            console.log('System prompt updated (Redis)')
+            return true
+        }
+
+        const config = this.getFileConfig()
         config.systemPrompt = prompt
-        this.saveConfig(config)
-        console.log('System prompt updated')
+        this.saveFileConfig(config)
+        console.log('System prompt updated (file)')
         return true
     }
 
     // ============= Flows =============
 
-    getCurrentFlow(): string {
-        return this.getConfig().currentFlow || 'karuna'
+    async getCurrentFlow(): Promise<string> {
+        if (redisService.isConnected) {
+            const flow = await redisService.get(R.CURRENT_FLOW)
+            if (flow) return flow
+        }
+        return this.getFileConfig().currentFlow || 'karuna'
     }
 
-    getAllFlows(): Record<string, any> {
-        const config = this.getConfig()
-        const customFlows = config.customFlows || {}
+    private async getCustomFlows(): Promise<Record<string, any>> {
+        if (redisService.isConnected) {
+            const raw = await redisService.get(R.CUSTOM_FLOWS)
+            if (raw) {
+                try { return JSON.parse(raw) } catch { /* fall through */ }
+            }
+        }
+        return this.getFileConfig().customFlows || {}
+    }
+
+    private async saveCustomFlows(flows: Record<string, any>): Promise<void> {
+        if (redisService.isConnected) {
+            await redisService.set(R.CUSTOM_FLOWS, JSON.stringify(flows))
+        }
+        // Also save to file as backup
+        const config = this.getFileConfig()
+        config.customFlows = flows
+        this.saveFileConfig(config)
+    }
+
+    async getAllFlows(): Promise<Record<string, any>> {
+        const customFlows = await this.getCustomFlows()
         const all: Record<string, any> = {}
 
         for (const [key, value] of Object.entries(FLOW_PROMPTS)) {
@@ -151,30 +254,39 @@ class ConfigService {
         return all
     }
 
-    getFlowData(flowId: string): any | null {
-        return this.getAllFlows()[flowId] || null
+    async getFlowData(flowId: string): Promise<any | null> {
+        const all = await this.getAllFlows()
+        return all[flowId] || null
     }
 
-    setFlow(flowId: string): boolean {
-        const flowData = this.getFlowData(flowId)
+    async setFlow(flowId: string): Promise<boolean> {
+        const flowData = await this.getFlowData(flowId)
         if (!flowData) return false
 
-        const config = this.getConfig()
+        const prompt = flowData.prompt || ''
+
+        if (redisService.isConnected) {
+            await redisService.set(R.CURRENT_FLOW, flowId)
+            await redisService.set(R.SYSTEM_PROMPT, prompt)
+        }
+
+        const config = this.getFileConfig()
         config.currentFlow = flowId
-        config.systemPrompt = flowData.prompt || ''
-        this.saveConfig(config)
+        config.systemPrompt = prompt
+        this.saveFileConfig(config)
+
         console.log(`Flow changed to: ${flowId}`)
         return true
     }
 
-    createCustomFlow(
+    async createCustomFlow(
         flowId: string,
         name: string,
         description: string,
         prompt: string,
         hasMenu = false,
         menuConfig?: MenuConfig
-    ): { success: boolean; message: string } {
+    ): Promise<{ success: boolean; message: string }> {
         if (flowId in FLOW_PROMPTS) {
             return { success: false, message: 'Cannot use builtin flow ID' }
         }
@@ -182,13 +294,12 @@ class ConfigService {
             return { success: false, message: 'ID can only contain lowercase letters, numbers, and underscores' }
         }
 
-        const config = this.getConfig()
-        if (!config.customFlows) config.customFlows = {}
-        if (flowId in config.customFlows) {
+        const customFlows = await this.getCustomFlows()
+        if (flowId in customFlows) {
             return { success: false, message: 'Custom flow with this ID already exists' }
         }
 
-        config.customFlows[flowId] = {
+        customFlows[flowId] = {
             name,
             description,
             prompt,
@@ -197,24 +308,24 @@ class ConfigService {
             created_at: new Date().toISOString(),
         }
 
-        this.saveConfig(config)
+        await this.saveCustomFlows(customFlows)
         return { success: true, message: 'Flow created successfully' }
     }
 
-    updateCustomFlow(
+    async updateCustomFlow(
         flowId: string,
         updates: { name?: string; description?: string; prompt?: string; has_menu?: boolean; menu_config?: MenuConfig }
-    ): { success: boolean; message: string } {
+    ): Promise<{ success: boolean; message: string }> {
         if (flowId in FLOW_PROMPTS) {
             return { success: false, message: 'Cannot edit builtin flows' }
         }
 
-        const config = this.getConfig()
-        if (!config.customFlows?.[flowId]) {
+        const customFlows = await this.getCustomFlows()
+        if (!customFlows[flowId]) {
             return { success: false, message: 'Custom flow not found' }
         }
 
-        const flow = config.customFlows[flowId]
+        const flow = customFlows[flowId]
         if (updates.name !== undefined) flow.name = updates.name
         if (updates.description !== undefined) flow.description = updates.description
         if (updates.prompt !== undefined) flow.prompt = updates.prompt
@@ -222,36 +333,39 @@ class ConfigService {
         if (updates.menu_config !== undefined) flow.menu_config = updates.menu_config
         flow.updated_at = new Date().toISOString()
 
-        if (config.currentFlow === flowId && updates.prompt) {
-            config.systemPrompt = updates.prompt
+        await this.saveCustomFlows(customFlows)
+
+        // If current flow was updated, also update the active prompt
+        const currentFlow = await this.getCurrentFlow()
+        if (currentFlow === flowId && updates.prompt) {
+            await this.updateSystemPrompt(updates.prompt)
         }
 
-        this.saveConfig(config)
         return { success: true, message: 'Flow updated successfully' }
     }
 
-    deleteCustomFlow(flowId: string): { success: boolean; message: string } {
+    async deleteCustomFlow(flowId: string): Promise<{ success: boolean; message: string }> {
         if (flowId in FLOW_PROMPTS) {
             return { success: false, message: 'Cannot delete builtin flows' }
         }
 
-        const config = this.getConfig()
-        if (!config.customFlows?.[flowId]) {
+        const customFlows = await this.getCustomFlows()
+        if (!customFlows[flowId]) {
             return { success: false, message: 'Custom flow not found' }
         }
 
-        if (config.currentFlow === flowId) {
-            config.currentFlow = 'karuna'
-            config.systemPrompt = FLOW_PROMPTS.karuna.prompt
+        const currentFlow = await this.getCurrentFlow()
+        if (currentFlow === flowId) {
+            await this.setFlow('karuna')
         }
 
-        delete config.customFlows[flowId]
-        this.saveConfig(config)
+        delete customFlows[flowId]
+        await this.saveCustomFlows(customFlows)
         return { success: true, message: 'Flow deleted successfully' }
     }
 
-    getMenuForFlow(flowId: string): MenuConfig | null {
-        const flowData = this.getFlowData(flowId)
+    async getMenuForFlow(flowId: string): Promise<MenuConfig | null> {
+        const flowData = await this.getFlowData(flowId)
         if (!flowData?.has_menu) return null
         return flowData.menu_config || null
     }

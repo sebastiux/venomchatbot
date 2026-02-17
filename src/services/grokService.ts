@@ -28,9 +28,9 @@ class GrokService {
 
         try {
             // Check if we should show menu
-            if (this.shouldShowMenu(userId)) {
-                const currentFlow = configService.getCurrentFlow()
-                const menuConfig = configService.getMenuForFlow(currentFlow)
+            if (await this.shouldShowMenu(userId)) {
+                const currentFlow = await configService.getCurrentFlow()
+                const menuConfig = await configService.getMenuForFlow(currentFlow)
                 if (menuConfig) {
                     this.userMenuState.set(userId, true)
                     return this.buildMenuMessage(menuConfig)
@@ -38,8 +38,8 @@ class GrokService {
             }
 
             // Check menu selection
-            const currentFlow = configService.getCurrentFlow()
-            const flowData = configService.getFlowData(currentFlow)
+            const currentFlow = await configService.getCurrentFlow()
+            const flowData = await configService.getFlowData(currentFlow)
             if (flowData?.has_menu && flowData?.menu_config) {
                 const menuResponse = this.handleMenuSelection(userId, userMessage, flowData.menu_config)
                 if (menuResponse) return menuResponse
@@ -58,7 +58,7 @@ class GrokService {
                 this.conversations.set(userId, history.slice(-20))
             }
 
-            const systemPrompt = configService.getSystemPrompt()
+            const systemPrompt = await configService.getSystemPrompt()
 
             console.log(`  Sending to Grok API (model: grok-4-fast-reasoning)`)
             console.log(`  Messages in context: ${this.conversations.get(userId)!.length}`)
@@ -84,9 +84,9 @@ class GrokService {
         }
     }
 
-    private shouldShowMenu(userId: string): boolean {
-        const currentFlow = configService.getCurrentFlow()
-        const flowData = configService.getFlowData(currentFlow)
+    private async shouldShowMenu(userId: string): Promise<boolean> {
+        const currentFlow = await configService.getCurrentFlow()
+        const flowData = await configService.getFlowData(currentFlow)
         if (flowData?.has_menu && flowData?.menu_config) {
             if (!this.userMenuState.has(userId)) return true
         }

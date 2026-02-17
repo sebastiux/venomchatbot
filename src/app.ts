@@ -14,6 +14,7 @@ import 'dotenv/config'
 
 import { grokService } from './services/grokService.js'
 import { configService } from './services/configService.js'
+import { redisService } from './services/redisService.js'
 import { maytapiService, type WebhookPayload } from './services/maytapiService.js'
 
 const PORT = process.env.PORT ?? 3008
@@ -46,7 +47,7 @@ async function handleIncomingMessage(from: string, text: string) {
     console.log(`Message from ${from}: ${text}`)
 
     // Check blacklist
-    if (configService.isBlacklisted(from)) {
+    if (await configService.isBlacklisted(from)) {
         console.log(`SKIP - Number ${from} is blacklisted`)
         return
     }
@@ -131,6 +132,7 @@ app.get('/health', async (_req, res) => {
         provider: 'maytapi',
         maytapi_configured: maytapiService.isConfigured(),
         maytapi_status: maytapiStatus,
+        redis_connected: redisService.isConnected,
     })
 })
 
@@ -240,49 +242,49 @@ app.post('/api/set-webhook', async (req, res) => {
 })
 
 // --- Blacklist ---
-app.get('/api/blacklist', (_req, res) => {
-    const blacklist = configService.getBlacklist()
+app.get('/api/blacklist', async (_req, res) => {
+    const blacklist = await configService.getBlacklist()
     res.json({ blacklist, count: blacklist.length })
 })
 
-app.post('/api/blacklist/add', (req, res) => {
+app.post('/api/blacklist/add', async (req, res) => {
     const { number } = req.body
     if (number) {
-        configService.addToBlacklist(number)
+        await configService.addToBlacklist(number)
     }
-    const blacklist = configService.getBlacklist()
+    const blacklist = await configService.getBlacklist()
     res.json({ status: 'added', number, blacklist })
 })
 
-app.post('/api/blacklist/remove', (req, res) => {
+app.post('/api/blacklist/remove', async (req, res) => {
     const { number } = req.body
     if (number) {
-        configService.removeFromBlacklist(number)
+        await configService.removeFromBlacklist(number)
     }
-    const blacklist = configService.getBlacklist()
+    const blacklist = await configService.getBlacklist()
     res.json({ status: 'removed', number, blacklist })
 })
 
 // --- Prompt ---
-app.get('/api/prompt', (_req, res) => {
+app.get('/api/prompt', async (_req, res) => {
     res.json({
-        prompt: configService.getSystemPrompt(),
-        current_flow: configService.getCurrentFlow(),
+        prompt: await configService.getSystemPrompt(),
+        current_flow: await configService.getCurrentFlow(),
     })
 })
 
-app.post('/api/prompt', (req, res) => {
+app.post('/api/prompt', async (req, res) => {
     const { prompt } = req.body
     if (prompt) {
-        configService.updateSystemPrompt(prompt)
+        await configService.updateSystemPrompt(prompt)
     }
     res.json({ status: 'updated', prompt })
 })
 
 // --- Flows ---
-app.get('/api/flows', (_req, res) => {
-    const allFlows = configService.getAllFlows()
-    const currentFlow = configService.getCurrentFlow()
+app.get('/api/flows', async (_req, res) => {
+    const allFlows = await configService.getAllFlows()
+    const currentFlow = await configService.getCurrentFlow()
 
     const flows = Object.entries(allFlows).map(([id, data]: [string, any]) => ({
         id,
@@ -299,15 +301,15 @@ app.get('/api/flows', (_req, res) => {
     res.json({ flows, current_flow: currentFlow })
 })
 
-app.post('/api/flow/activate', (req, res) => {
+app.post('/api/flow/activate', async (req, res) => {
     const { flow_id } = req.body
-    const flowData = configService.getFlowData(flow_id)
+    const flowData = await configService.getFlowData(flow_id)
 
     if (!flowData) {
         return res.status(404).json({ error: 'Flow not found' })
     }
 
-    configService.setFlow(flow_id)
+    await configService.setFlow(flow_id)
     res.json({
         status: 'activated',
         flow_id,
@@ -315,7 +317,7 @@ app.post('/api/flow/activate', (req, res) => {
     })
 })
 
-app.post('/api/flows', (req, res) => {
+app.post('/api/flows', async (req, res) => {
     const body = req.body
     let menuConfig = undefined
     if (body.flow_type === 'menu' && body.menu_options) {
@@ -326,7 +328,7 @@ app.post('/api/flows', (req, res) => {
         }
     }
 
-    const result = configService.createCustomFlow(
+    const result = await configService.createCustomFlow(
         body.id,
         body.name,
         body.description,
@@ -382,29 +384,43 @@ if (fs.existsSync(STATIC_DIR)) {
 
 // ============= START SERVER =============
 
-app.listen(+PORT, () => {
-    console.log('='.repeat(60))
-    console.log('  KARUNA BOT v4.0.0 (Maytapi WhatsApp API + Grok AI)')
-    console.log('='.repeat(60))
-    console.log()
-    console.log('  WHATSAPP:')
-    console.log(`    Provider: Maytapi REST API`)
-    console.log(`    Configured: ${maytapiService.isConfigured() ? 'YES' : 'NO - set MAYTAPI_* env vars'}`)
-    if (maytapiService.isConfigured()) {
-        console.log(`    Product ID: ${maytapiService.getProductId()}`)
-        console.log(`    Phone ID: ${maytapiService.getPhoneId()}`)
-    }
-    console.log()
-    console.log('  AI:')
-    console.log(`    Grok AI: ${process.env.XAI_API_KEY ? 'OK' : 'NOT CONFIGURED'}`)
-    console.log()
-    console.log('  SERVER:')
-    console.log(`    Port: ${PORT}`)
-    console.log(`    Dashboard: http://localhost:${PORT}`)
-    console.log(`    Health: http://localhost:${PORT}/health`)
-    console.log(`    Webhook: http://localhost:${PORT}/webhook`)
-    console.log()
-    console.log('  Configure your Maytapi webhook to point to:')
-    console.log(`    https://<your-domain>/webhook`)
-    console.log('='.repeat(60))
+async function start() {
+    // Connect to Redis (if REDIS_URL is set)
+    await redisService.connect()
+    await configService.seedRedis()
+
+    app.listen(+PORT, () => {
+        console.log('='.repeat(60))
+        console.log('  KARUNA BOT v4.0.0 (Maytapi WhatsApp API + Grok AI)')
+        console.log('='.repeat(60))
+        console.log()
+        console.log('  STORAGE:')
+        console.log(`    Redis: ${redisService.isConnected ? 'CONNECTED' : 'NOT CONFIGURED — using JSON file'}`)
+        console.log()
+        console.log('  WHATSAPP:')
+        console.log(`    Provider: Maytapi REST API`)
+        console.log(`    Configured: ${maytapiService.isConfigured() ? 'YES' : 'NO - set MAYTAPI_* env vars'}`)
+        if (maytapiService.isConfigured()) {
+            console.log(`    Product ID: ${maytapiService.getProductId()}`)
+            console.log(`    Phone ID: ${maytapiService.getPhoneId()}`)
+        }
+        console.log()
+        console.log('  AI:')
+        console.log(`    Grok AI: ${process.env.XAI_API_KEY ? 'OK' : 'NOT CONFIGURED'}`)
+        console.log()
+        console.log('  SERVER:')
+        console.log(`    Port: ${PORT}`)
+        console.log(`    Dashboard: http://localhost:${PORT}`)
+        console.log(`    Health: http://localhost:${PORT}/health`)
+        console.log(`    Webhook: http://localhost:${PORT}/webhook`)
+        console.log()
+        console.log('  Configure your Maytapi webhook to point to:')
+        console.log(`    https://<your-domain>/webhook`)
+        console.log('='.repeat(60))
+    })
+}
+
+start().catch((err) => {
+    console.error('Failed to start:', err)
+    process.exit(1)
 })
