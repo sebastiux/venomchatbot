@@ -21,6 +21,11 @@ class ConfigService {
         this.ensureConfigFile()
     }
 
+    /** Strip everything except digits from a phone number */
+    private normalizeNumber(number: string): string {
+        return number.replace(/\D/g, '')
+    }
+
     private ensureConfigFile(): void {
         try {
             const dir = path.dirname(this.configPath)
@@ -68,31 +73,47 @@ class ConfigService {
 
     // ============= Blacklist =============
 
+    /** Numbers from the BLACKLIST_NUMBERS env var (persist across deploys) */
+    private getEnvBlacklist(): string[] {
+        const envVal = process.env.BLACKLIST_NUMBERS || ''
+        if (!envVal.trim()) return []
+        return envVal.split(',').map((n) => this.normalizeNumber(n)).filter(Boolean)
+    }
+
+    /** All blocked numbers: env var + config file (deduplicated) */
     getBlacklist(): string[] {
-        return this.getConfig().blacklist || []
+        const fromFile = (this.getConfig().blacklist || []).map((n) => this.normalizeNumber(n))
+        const fromEnv = this.getEnvBlacklist()
+        return [...new Set([...fromEnv, ...fromFile])]
     }
 
     addToBlacklist(number: string): boolean {
+        const normalized = this.normalizeNumber(number)
+        if (!normalized) return false
         const config = this.getConfig()
-        if (!config.blacklist.includes(number)) {
-            config.blacklist.push(number)
+        const existing = config.blacklist.map((n) => this.normalizeNumber(n))
+        if (!existing.includes(normalized)) {
+            config.blacklist.push(normalized)
             this.saveConfig(config)
-            console.log(`Number ${number} added to blacklist`)
+            console.log(`Number ${normalized} added to blacklist`)
             return true
         }
         return false
     }
 
     removeFromBlacklist(number: string): boolean {
+        const normalized = this.normalizeNumber(number)
         const config = this.getConfig()
-        config.blacklist = config.blacklist.filter((n) => n !== number)
+        config.blacklist = config.blacklist.filter((n) => this.normalizeNumber(n) !== normalized)
         this.saveConfig(config)
-        console.log(`Number ${number} removed from blacklist`)
+        console.log(`Number ${normalized} removed from blacklist`)
         return true
     }
 
     isBlacklisted(number: string): boolean {
-        return this.getBlacklist().includes(number)
+        const normalized = this.normalizeNumber(number)
+        if (!normalized) return false
+        return this.getBlacklist().includes(normalized)
     }
 
     // ============= System Prompt =============
