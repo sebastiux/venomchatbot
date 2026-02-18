@@ -694,6 +694,178 @@
             margin-top: 10px;
         }
 
+        /* Recent Messages */
+        .message-list {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .message-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 14px 16px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            transition: background 0.2s;
+        }
+
+        .message-item:hover {
+            background: #e9ecef;
+        }
+
+        .message-avatar {
+            width: 36px;
+            height: 36px;
+            background: #000;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+
+        .message-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .message-from {
+            font-weight: 600;
+            color: #000;
+            font-size: 0.9rem;
+        }
+
+        .message-time {
+            font-size: 0.75rem;
+            color: #999;
+        }
+
+        .message-text {
+            color: #555;
+            font-size: 0.9rem;
+            word-break: break-word;
+        }
+
+        .message-actions {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .message-actions button {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            border-radius: 6px;
+        }
+
+        .btn-block {
+            background: #fff;
+            color: #dc3545;
+            border: 1px solid #dc3545;
+        }
+
+        .btn-block:hover {
+            background: #dc3545;
+            color: #fff;
+            box-shadow: none;
+            transform: none;
+        }
+
+        .btn-config {
+            background: #fff;
+            color: #000;
+            border: 1px solid #d5d5d5;
+        }
+
+        .btn-config:hover {
+            background: #000;
+            color: #fff;
+            box-shadow: none;
+            transform: none;
+        }
+
+        /* User Config */
+        .user-config-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .user-config-item {
+            padding: 16px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #e5e5e5;
+        }
+
+        .user-config-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .user-config-name {
+            font-weight: 700;
+            color: #000;
+        }
+
+        .user-config-number {
+            font-size: 0.85rem;
+            color: #666;
+            font-family: monospace;
+        }
+
+        .user-config-prompt {
+            font-size: 0.85rem;
+            color: #555;
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 8px;
+            max-height: 80px;
+            overflow-y: auto;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .user-config-notes {
+            font-size: 0.8rem;
+            color: #888;
+            margin-top: 6px;
+            font-style: italic;
+        }
+
+        .refresh-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .refresh-bar span {
+            font-size: 0.85rem;
+            color: #999;
+        }
+
+        .btn-sm {
+            padding: 6px 14px;
+            font-size: 0.85rem;
+        }
+
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
@@ -762,6 +934,27 @@
                 </button>
             </div>
 
+            <!-- Card de Mensajes Recientes -->
+            <div class="card" style="grid-column: 1 / -1;">
+                <h2>
+                    <div class="card-icon">R</div>
+                    Mensajes Recientes
+                </h2>
+                <div class="refresh-bar">
+                    <span id="messages-count">0 mensajes</span>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <span id="auto-refresh-label" style="font-size: 0.8rem; color: #999;">Auto-refresh: 10s</span>
+                        <button class="btn-sm btn-secondary" onclick="loadRecentMessages()">Actualizar</button>
+                    </div>
+                </div>
+                <div class="message-list" id="messages-container">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">—</div>
+                        <p>Cargando mensajes...</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Card de Blacklist -->
             <div class="card">
                 <h2>
@@ -788,6 +981,26 @@
                     <div class="empty-state">
                         <div class="empty-state-icon">—</div>
                         <p>Cargando blacklist...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card de Config por Usuario -->
+            <div class="card">
+                <h2>
+                    <div class="card-icon">U</div>
+                    Config por Usuario
+                </h2>
+                <p style="color: #666; margin-bottom: 15px; font-size: 0.9rem;">
+                    Prompt personalizado por numero. Tiene prioridad sobre el flow activo.
+                </p>
+                <button onclick="openUserConfigModal()" style="width: 100%; margin-bottom: 15px;">
+                    Agregar Config de Usuario
+                </button>
+                <div class="user-config-list" id="user-config-container">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">—</div>
+                        <p>Sin configuraciones personalizadas</p>
                     </div>
                 </div>
             </div>
@@ -876,6 +1089,38 @@
                 <div class="modal-actions">
                     <button onclick="closeFlowModal()" class="btn-danger">Cancelar</button>
                     <button onclick="saveFlow()" id="save-flow-btn">Guardar Modo</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para config de usuario -->
+    <div id="user-config-modal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2 id="user-modal-title">Agregar Config de Usuario</h2>
+                <span class="modal-close" onclick="closeUserConfigModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="uc-number">Numero de WhatsApp</label>
+                    <input type="text" id="uc-number" placeholder="ej: 5215512345678" />
+                </div>
+                <div class="form-group">
+                    <label for="uc-name">Nombre (referencia)</label>
+                    <input type="text" id="uc-name" placeholder="ej: Juan Perez" />
+                </div>
+                <div class="form-group">
+                    <label for="uc-prompt">Prompt personalizado (reemplaza el prompt del flow para este usuario)</label>
+                    <textarea id="uc-prompt" placeholder="ej: Eres un asistente exclusivo para Juan. Siempre saludalo por su nombre..." rows="6"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="uc-notes">Notas (opcional)</label>
+                    <input type="text" id="uc-notes" placeholder="ej: Cliente VIP, darle siempre prioridad" />
+                </div>
+                <div class="modal-actions">
+                    <button onclick="closeUserConfigModal()" class="btn-danger">Cancelar</button>
+                    <button onclick="saveUserConfig()">Guardar</button>
                 </div>
             </div>
         </div>
@@ -1004,26 +1249,19 @@
             const number = input.value.trim();
 
             if (!number) {
-                showAlert('Ingresa un número válido', 'error');
+                showAlert('Ingresa un numero valido', 'error');
                 return;
             }
 
             try {
-                const response = await fetch(`${API_BASE}/api/blacklist/add`, {
+                await fetch(`${API_BASE}/api/blacklist/add`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ number })
                 });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    showAlert(`Número ${number} agregado a blacklist`, 'success');
-                    input.value = '';
-                    loadBlacklist();
-                } else {
-                    showAlert(data.message || 'Error al agregar número', 'error');
-                }
+                showAlert(`Numero ${number} agregado a blacklist`, 'success');
+                input.value = '';
+                loadBlacklist();
             } catch (error) {
                 showAlert('Error al agregar a la blacklist', 'error');
                 console.error(error);
@@ -1031,25 +1269,16 @@
         }
 
         async function removeFromBlacklist(number) {
-            if (!confirm(`¿Eliminar ${number} de la blacklist?`)) {
-                return;
-            }
+            if (!confirm('Eliminar ' + number + ' de la blacklist?')) return;
 
             try {
-                const response = await fetch(`${API_BASE}/api/blacklist/remove`, {
+                await fetch(`${API_BASE}/api/blacklist/remove`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ number })
                 });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    showAlert(`Número ${number} eliminado de la blacklist`, 'success');
-                    loadBlacklist();
-                } else {
-                    showAlert(data.message || 'Error al eliminar número', 'error');
-                }
+                showAlert(`Numero ${number} eliminado de la blacklist`, 'success');
+                loadBlacklist();
             } catch (error) {
                 showAlert('Error al eliminar de la blacklist', 'error');
                 console.error(error);
@@ -1061,7 +1290,7 @@
             try {
                 const response = await fetch(`${API_BASE}/api/prompt`);
                 const data = await response.json();
-                document.getElementById('system-prompt').value = data.systemPrompt;
+                document.getElementById('system-prompt').value = data.prompt || data.systemPrompt || '';
             } catch (error) {
                 showAlert('Error al cargar el prompt', 'error');
                 console.error(error);
@@ -1072,7 +1301,7 @@
             const prompt = document.getElementById('system-prompt').value;
 
             if (!prompt.trim()) {
-                showLocalAlert('El prompt no puede estar vacío', 'error');
+                showLocalAlert('El prompt no puede estar vacio', 'error');
                 return;
             }
 
@@ -1080,17 +1309,12 @@
                 const response = await fetch(`${API_BASE}/api/prompt`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ systemPrompt: prompt })
+                    body: JSON.stringify({ prompt })
                 });
 
                 const data = await response.json();
-
-                if (data.success) {
-                    showAlert('Prompt actualizado correctamente', 'success');
-                    showLocalAlert('Configuración guardada exitosamente.', 'success');
-                } else {
-                    showLocalAlert(data.message || 'Error al guardar el prompt', 'error');
-                }
+                showAlert('Prompt actualizado correctamente', 'success');
+                showLocalAlert('Configuracion guardada exitosamente.', 'success');
             } catch (error) {
                 showLocalAlert('Error al guardar el prompt', 'error');
                 console.error(error);
@@ -1102,9 +1326,19 @@
             try {
                 const response = await fetch(`${API_BASE}/api/flows`);
                 const data = await response.json();
-                
-                if (data.success) {
-                    updateFlowDisplay(data.currentFlow, data.flows);
+
+                if (data.flows) {
+                    // Transform array format to object format for display
+                    const flowsObj = {};
+                    (data.flows || []).forEach(f => {
+                        flowsObj[f.id] = {
+                            name: f.name,
+                            description: f.description,
+                            isDefault: f.is_builtin,
+                            hasMenu: f.flow_type === 'menu',
+                        };
+                    });
+                    updateFlowDisplay(data.current_flow, flowsObj);
                 }
             } catch (error) {
                 console.error('Error al cargar flows:', error);
@@ -1156,17 +1390,17 @@
                 const response = await fetch(`${API_BASE}/api/flow/activate`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ flowId })
+                    body: JSON.stringify({ flow_id: flowId })
                 });
 
                 const data = await response.json();
 
-                if (data.success) {
-                    showAlert(`Modo activado: ${flowId}`, 'success');
+                if (data.status === 'activated') {
+                    showAlert(`Modo activado: ${data.flow_name || flowId}`, 'success');
                     loadFlows();
                     loadSystemPrompt();
                 } else {
-                    showAlert(data.message || 'Error al activar modo', 'error');
+                    showAlert(data.error || 'Error al activar modo', 'error');
                 }
             } catch (error) {
                 showAlert('Error al activar el modo', 'error');
@@ -1441,6 +1675,209 @@
             }, 5000);
         }
 
+        // ============= Recent Messages =============
+        let messagesInterval;
+
+        async function loadRecentMessages() {
+            try {
+                const response = await fetch(`${API_BASE}/api/messages/recent?limit=50`);
+                const data = await response.json();
+                const container = document.getElementById('messages-container');
+                const countEl = document.getElementById('messages-count');
+
+                countEl.textContent = `${data.count} mensajes`;
+
+                if (!data.messages || data.messages.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">—</div>
+                            <p>No hay mensajes recientes</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = data.messages.map(msg => {
+                    const initials = (msg.name || msg.from).substring(0, 2).toUpperCase();
+                    const time = new Date(msg.timestamp).toLocaleString('es-MX', {
+                        hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit'
+                    });
+                    const textPreview = msg.text.length > 120 ? msg.text.substring(0, 120) + '...' : msg.text;
+                    const escapedText = textPreview.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                    const escapedFrom = msg.from.replace(/'/g, "\\'");
+                    const escapedName = (msg.name || '').replace(/'/g, "\\'");
+
+                    return `
+                        <div class="message-item">
+                            <div class="message-avatar">${initials}</div>
+                            <div class="message-content">
+                                <div class="message-header">
+                                    <span class="message-from">${msg.name || msg.from}</span>
+                                    <span class="message-time">${time}</span>
+                                </div>
+                                <div class="message-text">${textPreview}</div>
+                                <div style="font-size: 0.75rem; color: #aaa; margin-top: 2px; font-family: monospace;">${msg.from}</div>
+                            </div>
+                            <div class="message-actions">
+                                <button class="btn-config btn-sm" onclick="openUserConfigModal('${escapedFrom}', '${escapedName}')" title="Configurar usuario">Config</button>
+                                <button class="btn-block btn-sm" onclick="quickBlacklist('${escapedFrom}')" title="Bloquear numero">Bloquear</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Error loading messages:', error);
+            }
+        }
+
+        async function quickBlacklist(number) {
+            if (!confirm('Bloquear el numero ' + number + '?')) return;
+            try {
+                await fetch(`${API_BASE}/api/blacklist/add`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ number })
+                });
+                showAlert(`Numero ${number} bloqueado`, 'success');
+                loadBlacklist();
+                loadRecentMessages();
+            } catch (error) {
+                showAlert('Error al bloquear', 'error');
+            }
+        }
+
+        function startMessagesPolling() {
+            loadRecentMessages();
+            messagesInterval = setInterval(loadRecentMessages, 10000);
+        }
+
+        // ============= User Config =============
+        let editingUserNumber = null;
+
+        async function loadUserConfigs() {
+            try {
+                const response = await fetch(`${API_BASE}/api/users/config`);
+                const data = await response.json();
+                const container = document.getElementById('user-config-container');
+                const configs = data.configs || {};
+                const entries = Object.entries(configs);
+
+                if (entries.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">—</div>
+                            <p>Sin configuraciones personalizadas</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = entries.map(([number, cfg]) => {
+                    const promptPreview = cfg.custom_prompt.length > 100
+                        ? cfg.custom_prompt.substring(0, 100) + '...'
+                        : cfg.custom_prompt;
+                    const escapedNumber = number.replace(/'/g, "\\'");
+
+                    return `
+                        <div class="user-config-item">
+                            <div class="user-config-header">
+                                <div>
+                                    <span class="user-config-name">${cfg.name || 'Sin nombre'}</span>
+                                    <span class="user-config-number">${number}</span>
+                                </div>
+                                <div style="display: flex; gap: 6px;">
+                                    <button class="btn-sm btn-secondary" onclick="editUserConfig('${escapedNumber}')">Editar</button>
+                                    <button class="btn-sm btn-danger" onclick="deleteUserConfig('${escapedNumber}')">Eliminar</button>
+                                </div>
+                            </div>
+                            <div class="user-config-prompt">${promptPreview}</div>
+                            ${cfg.notes ? `<div class="user-config-notes">${cfg.notes}</div>` : ''}
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Error loading user configs:', error);
+            }
+        }
+
+        function openUserConfigModal(number = '', name = '') {
+            editingUserNumber = null;
+            document.getElementById('user-modal-title').textContent = 'Agregar Config de Usuario';
+            document.getElementById('uc-number').value = number;
+            document.getElementById('uc-number').disabled = false;
+            document.getElementById('uc-name').value = name;
+            document.getElementById('uc-prompt').value = '';
+            document.getElementById('uc-notes').value = '';
+            document.getElementById('user-config-modal').classList.add('show');
+        }
+
+        async function editUserConfig(number) {
+            try {
+                const response = await fetch(`${API_BASE}/api/users/config`);
+                const data = await response.json();
+                const cfg = data.configs[number];
+                if (!cfg) return;
+
+                editingUserNumber = number;
+                document.getElementById('user-modal-title').textContent = 'Editar Config de Usuario';
+                document.getElementById('uc-number').value = number;
+                document.getElementById('uc-number').disabled = true;
+                document.getElementById('uc-name').value = cfg.name || '';
+                document.getElementById('uc-prompt').value = cfg.custom_prompt || '';
+                document.getElementById('uc-notes').value = cfg.notes || '';
+                document.getElementById('user-config-modal').classList.add('show');
+            } catch (error) {
+                showAlert('Error al cargar config', 'error');
+            }
+        }
+
+        async function saveUserConfig() {
+            const number = document.getElementById('uc-number').value.trim();
+            const name = document.getElementById('uc-name').value.trim();
+            const custom_prompt = document.getElementById('uc-prompt').value.trim();
+            const notes = document.getElementById('uc-notes').value.trim();
+
+            if (!number || !custom_prompt) {
+                showAlert('Numero y prompt son requeridos', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/users/config`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ number, name, custom_prompt, notes })
+                });
+                const data = await response.json();
+
+                if (data.status === 'saved') {
+                    showAlert(`Config guardada para ${number}`, 'success');
+                    closeUserConfigModal();
+                    loadUserConfigs();
+                } else {
+                    showAlert(data.error || 'Error al guardar', 'error');
+                }
+            } catch (error) {
+                showAlert('Error al guardar config', 'error');
+            }
+        }
+
+        async function deleteUserConfig(number) {
+            if (!confirm('Eliminar config personalizada para ' + number + '?')) return;
+            try {
+                await fetch(`${API_BASE}/api/users/${number}/config`, { method: 'DELETE' });
+                showAlert(`Config eliminada para ${number}`, 'success');
+                loadUserConfigs();
+            } catch (error) {
+                showAlert('Error al eliminar config', 'error');
+            }
+        }
+
+        function closeUserConfigModal() {
+            document.getElementById('user-config-modal').classList.remove('show');
+            editingUserNumber = null;
+        }
+
         // Event Listeners
         document.getElementById('number-input').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
@@ -1449,10 +1886,10 @@
         });
 
         document.addEventListener('click', (e) => {
-            const modal = document.getElementById('flow-modal');
-            if (e.target === modal) {
-                closeFlowModal();
-            }
+            const flowModal = document.getElementById('flow-modal');
+            const userModal = document.getElementById('user-config-modal');
+            if (e.target === flowModal) closeFlowModal();
+            if (e.target === userModal) closeUserConfigModal();
         });
 
         // Initialize
@@ -1461,6 +1898,8 @@
             loadBlacklist();
             loadSystemPrompt();
             loadFlows();
+            startMessagesPolling();
+            loadUserConfigs();
         });
     </script>
 </body>

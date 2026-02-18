@@ -121,6 +121,37 @@ class RedisService {
             return []
         }
     }
+
+    // ============= List ops (for recent messages) =============
+
+    async lPush(key: string, value: string): Promise<boolean> {
+        if (!this.isConnected) return false
+        try {
+            await this.client!.lpush(key, value)
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    async lRange(key: string, start: number, stop: number): Promise<string[]> {
+        if (!this.isConnected) return []
+        try {
+            return await this.client!.lrange(key, start, stop)
+        } catch {
+            return []
+        }
+    }
+
+    async lTrim(key: string, start: number, stop: number): Promise<boolean> {
+        if (!this.isConnected) return false
+        try {
+            await this.client!.ltrim(key, start, stop)
+            return true
+        } catch {
+            return false
+        }
+    }
 }
 
 export const redisService = new RedisService()

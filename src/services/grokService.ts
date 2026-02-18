@@ -98,15 +98,22 @@ class GrokService {
                 this.conversations.set(userId, history.slice(-20))
             }
 
-            // Use per-user demo prompt if in demo mode, otherwise global system prompt
-            const systemPrompt = this.userDemoState.has(userId)
-                ? this.userDemoState.get(userId)!.prompt
-                : await configService.getSystemPrompt()
+            // Priority: 1) user-specific config  2) demo prompt  3) global flow prompt
+            let systemPrompt: string
+            let promptSource = ''
 
-            const demoLabel = this.userDemoState.has(userId)
-                ? ` [DEMO: ${this.userDemoState.get(userId)!.flowId}]`
-                : ''
-            console.log(`  Sending to Grok API (model: grok-4-fast-reasoning)${demoLabel}`)
+            const userConfig = await configService.getUserConfig(userId)
+            if (userConfig?.custom_prompt) {
+                systemPrompt = userConfig.custom_prompt
+                promptSource = ` [USER: ${userConfig.name || userId}]`
+            } else if (this.userDemoState.has(userId)) {
+                systemPrompt = this.userDemoState.get(userId)!.prompt
+                promptSource = ` [DEMO: ${this.userDemoState.get(userId)!.flowId}]`
+            } else {
+                systemPrompt = await configService.getSystemPrompt()
+            }
+
+            console.log(`  Sending to Grok API (model: grok-4-fast-reasoning)${promptSource}`)
             console.log(`  Messages in context: ${this.conversations.get(userId)!.length}`)
 
             const completion = await this.client.chat.completions.create({

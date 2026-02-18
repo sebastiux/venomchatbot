@@ -110,6 +110,10 @@ app.post('/webhook', async (req, res) => {
             return
         }
 
+        // Log message to Redis for recent messages panel
+        const senderName = payload.user?.name || from
+        await configService.logMessage(from, senderName, text)
+
         await handleIncomingMessage(from, text)
     } catch (err: any) {
         console.error('[WEBHOOK] Error processing message:', err.message)
@@ -341,6 +345,42 @@ app.post('/api/flows', async (req, res) => {
         return res.status(400).json({ error: result.message })
     }
     res.json({ status: 'created', flow_id: body.id })
+})
+
+// --- Recent Messages ---
+app.get('/api/messages/recent', async (req, res) => {
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 200)
+    const messages = await configService.getRecentMessages(limit)
+    res.json({ messages, count: messages.length })
+})
+
+// --- User-specific Config ---
+app.get('/api/users/config', async (_req, res) => {
+    const configs = await configService.getAllUserConfigs()
+    res.json({ configs })
+})
+
+app.post('/api/users/config', async (req, res) => {
+    const { number, name, custom_prompt, notes } = req.body
+    if (!number || !custom_prompt) {
+        return res.status(400).json({ error: 'number and custom_prompt are required' })
+    }
+    const success = await configService.setUserConfig(number, name || '', custom_prompt, notes || '')
+    if (success) {
+        res.json({ status: 'saved', number })
+    } else {
+        res.status(400).json({ error: 'Invalid number' })
+    }
+})
+
+app.delete('/api/users/:number/config', async (req, res) => {
+    const { number } = req.params
+    const deleted = await configService.deleteUserConfig(number)
+    if (deleted) {
+        res.json({ status: 'deleted', number })
+    } else {
+        res.status(404).json({ error: 'User config not found' })
+    }
 })
 
 // --- Send Message (from dashboard / external) ---

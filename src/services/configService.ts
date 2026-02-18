@@ -18,6 +18,25 @@ const R = {
     CURRENT_FLOW: 'bot:currentFlow',
     SYSTEM_PROMPT: 'bot:systemPrompt',
     CUSTOM_FLOWS: 'bot:customFlows',
+    RECENT_MESSAGES: 'bot:messages:recent',
+    USER_CONFIGS: 'bot:user:configs',
+}
+
+const MAX_RECENT_MESSAGES = 200
+
+export interface RecentMessage {
+    id: string
+    from: string
+    name: string
+    text: string
+    timestamp: string
+}
+
+export interface UserConfig {
+    name: string
+    custom_prompt: string
+    notes: string
+    created_at: string
 }
 
 interface BotConfig {
@@ -368,6 +387,85 @@ class ConfigService {
         const flowData = await this.getFlowData(flowId)
         if (!flowData?.has_menu) return null
         return flowData.menu_config || null
+    }
+
+    // ============= Recent Messages =============
+
+    async logMessage(from: string, name: string, text: string): Promise<void> {
+        const msg: RecentMessage = {
+            id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+            from: this.normalizeNumber(from),
+            name: name || from,
+            text,
+            timestamp: new Date().toISOString(),
+        }
+
+        if (redisService.isConnected) {
+            await redisService.lPush(R.RECENT_MESSAGES, JSON.stringify(msg))
+            await redisService.lTrim(R.RECENT_MESSAGES, 0, MAX_RECENT_MESSAGES - 1)
+        }
+    }
+
+    async getRecentMessages(limit = 50): Promise<RecentMessage[]> {
+        if (!redisService.isConnected) return []
+        const raw = await redisService.lRange(R.RECENT_MESSAGES, 0, limit - 1)
+        return raw.map((s) => {
+            try { return JSON.parse(s) } catch { return null }
+        }).filter(Boolean) as RecentMessage[]
+    }
+
+    // ============= User-specific Configs =============
+
+    private async getUserConfigs(): Promise<Record<string, UserConfig>> {
+        if (redisService.isConnected) {
+            const raw = await redisService.get(R.USER_CONFIGS)
+            if (raw) {
+                try { return JSON.parse(raw) } catch { /* fall through */ }
+            }
+        }
+        return {}
+    }
+
+    private async saveUserConfigs(configs: Record<string, UserConfig>): Promise<void> {
+        if (redisService.isConnected) {
+            await redisService.set(R.USER_CONFIGS, JSON.stringify(configs))
+        }
+    }
+
+    async getAllUserConfigs(): Promise<Record<string, UserConfig>> {
+        return this.getUserConfigs()
+    }
+
+    async getUserConfig(number: string): Promise<UserConfig | null> {
+        const normalized = this.normalizeNumber(number)
+        const configs = await this.getUserConfigs()
+        return configs[normalized] || null
+    }
+
+    async setUserConfig(number: string, name: string, customPrompt: string, notes: string): Promise<boolean> {
+        const normalized = this.normalizeNumber(number)
+        if (!normalized) return false
+
+        const configs = await this.getUserConfigs()
+        configs[normalized] = {
+            name,
+            custom_prompt: customPrompt,
+            notes,
+            created_at: configs[normalized]?.created_at || new Date().toISOString(),
+        }
+        await this.saveUserConfigs(configs)
+        console.log(`User config set for ${normalized}`)
+        return true
+    }
+
+    async deleteUserConfig(number: string): Promise<boolean> {
+        const normalized = this.normalizeNumber(number)
+        const configs = await this.getUserConfigs()
+        if (!configs[normalized]) return false
+        delete configs[normalized]
+        await this.saveUserConfigs(configs)
+        console.log(`User config deleted for ${normalized}`)
+        return true
     }
 }
 
