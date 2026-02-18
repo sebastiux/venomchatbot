@@ -1,13 +1,27 @@
 /**
  * Grok AI service using xAI API (OpenAI-compatible).
+ * Supports per-user demo mode for the Karuna Demos showcase flow.
  */
 import OpenAI from 'openai'
 import { configService } from './configService.js'
+
+interface DemoState {
+    flowId: string
+    prompt: string
+}
+
+interface MenuSelectionResult {
+    response: string
+    demoFlowId?: string
+}
+
+const DEMO_RESET_KEYWORDS = ['menu', 'demos', 'cambiar', 'ejemplos', 'volver', 'regresar', '0']
 
 class GrokService {
     private client: OpenAI | null
     private conversations: Map<string, Array<{ role: string; content: string }>>
     private userMenuState: Map<string, boolean>
+    private userDemoState: Map<string, DemoState>
 
     constructor() {
         this.client = process.env.XAI_API_KEY
@@ -18,6 +32,7 @@ class GrokService {
             : null
         this.conversations = new Map()
         this.userMenuState = new Map()
+        this.userDemoState = new Map()
         console.log(`GrokService initialized: ${this.client ? 'OK' : 'NO API KEY'}`)
     }
 
@@ -27,9 +42,23 @@ class GrokService {
         }
 
         try {
-            // Check if we should show menu
+            const currentFlow = await configService.getCurrentFlow()
+            const flowData = await configService.getFlowData(currentFlow)
+            const lowerMsg = userMessage.trim().toLowerCase()
+
+            // Handle demo reset keywords — return to demo menu
+            if (this.userDemoState.has(userId) && DEMO_RESET_KEYWORDS.includes(lowerMsg)) {
+                this.userDemoState.delete(userId)
+                this.conversations.delete(userId)
+                this.userMenuState.delete(userId)
+                if (flowData?.has_menu && flowData?.menu_config) {
+                    this.userMenuState.set(userId, true)
+                    return this.buildMenuMessage(flowData.menu_config)
+                }
+            }
+
+            // Check if we should show menu (first message for this user)
             if (await this.shouldShowMenu(userId)) {
-                const currentFlow = await configService.getCurrentFlow()
                 const menuConfig = await configService.getMenuForFlow(currentFlow)
                 if (menuConfig) {
                     this.userMenuState.set(userId, true)
@@ -37,12 +66,23 @@ class GrokService {
                 }
             }
 
-            // Check menu selection
-            const currentFlow = await configService.getCurrentFlow()
-            const flowData = await configService.getFlowData(currentFlow)
+            // Check menu selection (with demo flow switching support)
             if (flowData?.has_menu && flowData?.menu_config) {
-                const menuResponse = this.handleMenuSelection(userId, userMessage, flowData.menu_config)
-                if (menuResponse) return menuResponse
+                const result = this.handleMenuSelection(userId, userMessage, flowData.menu_config)
+                if (result) {
+                    if (result.demoFlowId) {
+                        const demoFlow = await configService.getFlowData(result.demoFlowId)
+                        if (demoFlow) {
+                            this.userDemoState.set(userId, {
+                                flowId: result.demoFlowId,
+                                prompt: demoFlow.prompt,
+                            })
+                            this.conversations.delete(userId)
+                            console.log(`  Demo activated for ${userId}: ${result.demoFlowId}`)
+                        }
+                    }
+                    return result.response
+                }
             }
 
             // Normal AI response
@@ -58,9 +98,15 @@ class GrokService {
                 this.conversations.set(userId, history.slice(-20))
             }
 
-            const systemPrompt = await configService.getSystemPrompt()
+            // Use per-user demo prompt if in demo mode, otherwise global system prompt
+            const systemPrompt = this.userDemoState.has(userId)
+                ? this.userDemoState.get(userId)!.prompt
+                : await configService.getSystemPrompt()
 
-            console.log(`  Sending to Grok API (model: grok-4-fast-reasoning)`)
+            const demoLabel = this.userDemoState.has(userId)
+                ? ` [DEMO: ${this.userDemoState.get(userId)!.flowId}]`
+                : ''
+            console.log(`  Sending to Grok API (model: grok-4-fast-reasoning)${demoLabel}`)
             console.log(`  Messages in context: ${this.conversations.get(userId)!.length}`)
 
             const completion = await this.client.chat.completions.create({
@@ -103,12 +149,16 @@ class GrokService {
         return message
     }
 
-    private handleMenuSelection(userId: string, msg: string, menuConfig: any): string | null {
+    private handleMenuSelection(_userId: string, msg: string, menuConfig: any): MenuSelectionResult | null {
         try {
             const selection = parseInt(msg.trim())
             const options = menuConfig.options || []
             if (isNaN(selection) || selection < 1 || selection > options.length) return null
-            return options[selection - 1].response || null
+            const option = options[selection - 1]
+            return {
+                response: option.response || '',
+                demoFlowId: option.demo_flow_id,
+            }
         } catch {
             return null
         }
@@ -117,6 +167,7 @@ class GrokService {
     clearConversation(userId: string): void {
         this.conversations.delete(userId)
         this.userMenuState.delete(userId)
+        this.userDemoState.delete(userId)
         console.log(`Conversation reset for: ${userId}`)
     }
 

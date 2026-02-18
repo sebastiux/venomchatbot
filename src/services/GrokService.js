@@ -4,11 +4,13 @@ import configService from './ConfigService.js';
 
 dotenv.config();
 
+const DEMO_RESET_KEYWORDS = ['menu', 'demos', 'cambiar', 'ejemplos', 'volver', 'regresar', '0'];
+
 class GrokService {
   constructor() {
     console.log('🔧 Inicializando GrokService...');
     console.log('📌 API Key presente:', !!process.env.XAI_API_KEY);
-    
+
     this.client = new OpenAI({
       apiKey: process.env.XAI_API_KEY,
       baseURL: 'https://api.x.ai/v1'
@@ -17,6 +19,7 @@ class GrokService {
     this.systemPrompt = configService.getSystemPrompt();
     this.conversations = {};
     this.userMenuState = {}; // Track if user has seen menu
+    this.userDemoState = {}; // Track per-user demo state { flowId, prompt }
     console.log('✅ GrokService inicializado correctamente\n');
   }
 
@@ -51,41 +54,63 @@ class GrokService {
 
   handleMenuSelection(userId, userMessage, menuConfig) {
     const selection = parseInt(userMessage.trim());
-    
+
     if (isNaN(selection) || selection < 1 || selection > menuConfig.options.length) {
       return null;
     }
-    
+
     const selectedOption = menuConfig.options[selection - 1];
-    return selectedOption.response;
+    return {
+      response: selectedOption.response,
+      demoFlowId: selectedOption.demoFlowId
+    };
   }
 
   async getResponse(userId, userMessage) {
     console.log('\n📨 Nueva solicitud a Grok:');
     console.log('  Usuario:', userId);
     console.log('  Mensaje:', userMessage);
-    
+
     try {
+      const currentFlow = configService.getCurrentFlow();
+      const flowData = configService.getFlowData(currentFlow);
+      const lowerMsg = userMessage.trim().toLowerCase();
+
+      // Handle demo reset keywords — return to demo menu
+      if (this.userDemoState[userId] && DEMO_RESET_KEYWORDS.includes(lowerMsg)) {
+        delete this.userDemoState[userId];
+        this.conversations[userId] = [];
+        delete this.userMenuState[userId];
+        if (flowData && flowData.hasMenu && flowData.menuConfig) {
+          this.userMenuState[userId] = true;
+          return this.buildMenuMessage(flowData.menuConfig);
+        }
+      }
+
       // Check if we should show menu
       if (this.shouldShowMenu(userId)) {
-        const currentFlow = configService.getCurrentFlow();
         const menuConfig = configService.getMenuForFlow(currentFlow);
-        
+
         if (menuConfig) {
           this.userMenuState[userId] = true;
           return this.buildMenuMessage(menuConfig);
         }
       }
 
-      // Check if this is a menu selection
-      const currentFlow = configService.getCurrentFlow();
-      const flowData = configService.getFlowData(currentFlow);
-      
+      // Check if this is a menu selection (with demo flow switching)
       if (flowData && flowData.hasMenu && flowData.menuConfig) {
-        const menuResponse = this.handleMenuSelection(userId, userMessage, flowData.menuConfig);
-        if (menuResponse) {
+        const result = this.handleMenuSelection(userId, userMessage, flowData.menuConfig);
+        if (result) {
+          if (result.demoFlowId) {
+            const demoFlow = configService.getFlowData(result.demoFlowId);
+            if (demoFlow) {
+              this.userDemoState[userId] = { flowId: result.demoFlowId, prompt: demoFlow.prompt };
+              this.conversations[userId] = [];
+              console.log(`  🎭 Demo activada para ${userId}: ${result.demoFlowId}`);
+            }
+          }
           console.log('  📋 Respuesta de menú seleccionada');
-          return menuResponse;
+          return result.response;
         }
       }
 
@@ -105,14 +130,20 @@ class GrokService {
         console.log('  ♻️  Historial recortado a 20 mensajes');
       }
 
+      // Use per-user demo prompt if in demo mode, otherwise global prompt
+      const currentPrompt = this.userDemoState[userId]
+        ? this.userDemoState[userId].prompt
+        : (this.systemPrompt || configService.getSystemPrompt());
+
+      const demoLabel = this.userDemoState[userId]
+        ? ` [DEMO: ${this.userDemoState[userId].flowId}]`
+        : '';
       console.log('  📤 Enviando a Grok API...');
-      console.log('  🤖 Modelo: grok-4-fast-reasoning');
+      console.log(`  🤖 Modelo: grok-4-fast-reasoning${demoLabel}`);
       console.log('  💬 Mensajes en contexto:', this.conversations[userId].length);
 
-      const currentPrompt = this.systemPrompt || configService.getSystemPrompt();
-
       const completion = await this.client.chat.completions.create({
-        model: 'grok-4-fast-reasoning',  
+        model: 'grok-4-fast-reasoning',
         messages: [
           { role: 'system', content: currentPrompt },
           ...this.conversations[userId]
@@ -137,14 +168,15 @@ class GrokService {
       console.error('\n❌ ERROR EN GROK API:');
       console.error('  Mensaje:', error.message);
       console.error('  Status:', error.status);
-      
+
       return 'Disculpa, hubo un error técnico. ¿Puedes intentar de nuevo?';
     }
   }
 
   clearConversation(userId) {
     this.conversations[userId] = [];
-    this.userMenuState[userId] = false;
+    delete this.userMenuState[userId];
+    delete this.userDemoState[userId];
     console.log('🔄 Conversación reiniciada para:', userId);
   }
 
