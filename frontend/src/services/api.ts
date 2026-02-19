@@ -7,6 +7,8 @@ import type {
   PromptResponse,
   HealthResponse,
   MenuOption,
+  RecentMessagesResponse,
+  UserConfigsResponse,
 } from '../types';
 
 // API base URL - uses environment variable in production, empty string for same-origin in dev
@@ -123,5 +125,33 @@ export async function updatePrompt(prompt: string): Promise<void> {
   await fetchApi('/api/prompt', {
     method: 'POST',
     body: JSON.stringify({ prompt }),
+  });
+}
+
+// Recent Messages
+export async function getRecentMessages(limit = 50): Promise<RecentMessagesResponse> {
+  return fetchApi<RecentMessagesResponse>(`/api/messages/recent?limit=${limit}`);
+}
+
+// User Configs
+export async function getUserConfigs(): Promise<UserConfigsResponse> {
+  return fetchApi<UserConfigsResponse>('/api/users/config');
+}
+
+export async function saveUserConfig(
+  number: string,
+  name: string,
+  custom_prompt: string,
+  notes: string
+): Promise<void> {
+  await fetchApi('/api/users/config', {
+    method: 'POST',
+    body: JSON.stringify({ number, name, custom_prompt, notes }),
+  });
+}
+
+export async function deleteUserConfig(number: string): Promise<void> {
+  await fetchApi(`/api/users/${number}/config`, {
+    method: 'DELETE',
   });
 }

@@ -57,3 +57,29 @@ export interface HealthResponse {
   uptime: number;
   timestamp: string;
 }
+
+// Recent Messages Types
+export interface RecentMessage {
+  id: string;
+  from: string;
+  name: string;
+  text: string;
+  timestamp: string;
+}
+
+export interface RecentMessagesResponse {
+  messages: RecentMessage[];
+  count: number;
+}
+
+// User Config Types
+export interface UserConfig {
+  name: string;
+  custom_prompt: string;
+  notes: string;
+  created_at: string;
+}
+
+export interface UserConfigsResponse {
+  configs: Record<string, UserConfig>;
+}

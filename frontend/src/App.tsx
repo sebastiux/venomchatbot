@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import ConnectionStatus from './components/ConnectionStatus';
 import Blacklist from './components/Blacklist';
 import FlowManager from './components/FlowManager';
 import SystemPrompt from './components/SystemPrompt';
+import RecentMessages from './components/RecentMessages';
+import UserConfigs from './components/UserConfigs';
 
 type AlertType = 'success' | 'error' | 'info';
 
@@ -14,6 +16,8 @@ interface Alert {
 export default function App() {
   const [alert, setAlert] = useState<Alert | null>(null);
   const [promptRefresh, setPromptRefresh] = useState(0);
+  const [blacklistRefresh, setBlacklistRefresh] = useState(0);
+  const [configPrefill, setConfigPrefill] = useState<{ number: string; name: string } | null>(null);
 
   const showAlert = (message: string, type: AlertType = 'info') => {
     setAlert({ message, type });
@@ -23,6 +27,18 @@ export default function App() {
   const handleFlowChange = () => {
     setPromptRefresh((prev) => prev + 1);
   };
+
+  const handleBlacklistChange = useCallback(() => {
+    setBlacklistRefresh((prev) => prev + 1);
+  }, []);
+
+  const handleConfigUser = useCallback((number: string, name: string) => {
+    setConfigPrefill({ number, name });
+  }, []);
+
+  const handlePrefillConsumed = useCallback(() => {
+    setConfigPrefill(null);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -72,7 +88,7 @@ export default function App() {
           {/* Left Column */}
           <div className="space-y-6">
             <ConnectionStatus />
-            <Blacklist onAlert={showAlert} />
+            <Blacklist onAlert={showAlert} key={`bl-${blacklistRefresh}`} />
           </div>
 
           {/* Right Column */}
@@ -80,6 +96,25 @@ export default function App() {
             <FlowManager onAlert={showAlert} onFlowChange={handleFlowChange} />
             <SystemPrompt onAlert={showAlert} refreshTrigger={promptRefresh} />
           </div>
+        </div>
+
+        {/* Full Width: Recent Messages */}
+        <div className="mt-6">
+          <RecentMessages
+            onAlert={showAlert}
+            onBlacklistChange={handleBlacklistChange}
+            onConfigUser={handleConfigUser}
+          />
+        </div>
+
+        {/* Full Width: User Configs */}
+        <div className="mt-6">
+          <UserConfigs
+            onAlert={showAlert}
+            prefillNumber={configPrefill?.number}
+            prefillName={configPrefill?.name}
+            onPrefillConsumed={handlePrefillConsumed}
+          />
         </div>
       </main>
 
