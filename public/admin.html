@@ -1435,47 +1435,49 @@
         async function editFlow(flowId) {
             try {
                 const response = await fetch(`${API_BASE}/api/flows/${flowId}`);
-                const data = await response.json();
-                
-                if (data.success) {
-                    editingFlowId = flowId;
-                    document.getElementById('modal-title').textContent = 'Editar Modo Personalizado';
-                    document.getElementById('flow-id').value = flowId;
-                    document.getElementById('flow-id').disabled = true;
-                    document.getElementById('flow-name').value = data.flow.name;
-                    document.getElementById('flow-description').value = data.flow.description;
-                    document.getElementById('flow-prompt').value = data.flow.prompt;
-                    document.getElementById('save-flow-btn').textContent = 'Actualizar Modo';
-                    
-                    // Set menu toggle
-                    const hasMenu = data.flow.hasMenu || false;
-                    if (hasMenu) {
-                        document.getElementById('menu-toggle').classList.add('active');
-                        document.getElementById('menu-config').classList.add('show');
-                        document.getElementById('flow-type-description').textContent = 'Modo Menú: Opciones predefinidas numeradas';
-                        
-                        // Load menu config
-                        if (data.flow.menuConfig) {
-                            document.getElementById('menu-welcome').value = data.flow.menuConfig.welcomeMessage || '';
-                            document.getElementById('menu-footer').value = data.flow.menuConfig.footerMessage || '';
-                            
-                            // Load menu options
-                            menuOptionsCount = 0;
-                            document.getElementById('menu-options').innerHTML = '';
-                            if (data.flow.menuConfig.options) {
-                                data.flow.menuConfig.options.forEach(option => {
-                                    addMenuOption(option.label, option.response);
-                                });
-                            }
-                        }
-                    } else {
-                        document.getElementById('menu-toggle').classList.remove('active');
-                        document.getElementById('menu-config').classList.remove('show');
-                        document.getElementById('flow-type-description').textContent = 'Modo Inteligente: Conversación libre con IA';
-                    }
-                    
-                    document.getElementById('flow-modal').classList.add('show');
+                if (!response.ok) {
+                    showAlert('Error al cargar el modo', 'error');
+                    return;
                 }
+                const flow = await response.json();
+
+                editingFlowId = flowId;
+                document.getElementById('modal-title').textContent = 'Editar Modo Personalizado';
+                document.getElementById('flow-id').value = flowId;
+                document.getElementById('flow-id').disabled = true;
+                document.getElementById('flow-name').value = flow.name || '';
+                document.getElementById('flow-description').value = flow.description || '';
+                document.getElementById('flow-prompt').value = flow.system_prompt || '';
+                document.getElementById('save-flow-btn').textContent = 'Actualizar Modo';
+
+                // Set menu toggle
+                const hasMenu = flow.flow_type === 'menu';
+                if (hasMenu) {
+                    document.getElementById('menu-toggle').classList.add('active');
+                    document.getElementById('menu-config').classList.add('show');
+                    document.getElementById('flow-type-description').textContent = 'Modo Menu: Opciones predefinidas numeradas';
+
+                    document.getElementById('menu-welcome').value = flow.welcome_message || '';
+                    document.getElementById('menu-footer').value = flow.footer_message || '';
+
+                    menuOptionsCount = 0;
+                    document.getElementById('menu-options').innerHTML = '';
+                    if (flow.menu_options) {
+                        flow.menu_options.forEach(option => {
+                            addMenuOption(option.label, option.response);
+                        });
+                    }
+                } else {
+                    document.getElementById('menu-toggle').classList.remove('active');
+                    document.getElementById('menu-config').classList.remove('show');
+                    document.getElementById('flow-type-description').textContent = 'Modo Inteligente: Conversacion libre con IA';
+                    document.getElementById('menu-welcome').value = '';
+                    document.getElementById('menu-footer').value = '';
+                    menuOptionsCount = 0;
+                    document.getElementById('menu-options').innerHTML = '';
+                }
+
+                document.getElementById('flow-modal').classList.add('show');
             } catch (error) {
                 showAlert('Error al cargar el modo', 'error');
                 console.error(error);
@@ -1488,54 +1490,54 @@
             const description = document.getElementById('flow-description').value.trim();
             const prompt = document.getElementById('flow-prompt').value.trim();
             const hasMenu = document.getElementById('menu-toggle').classList.contains('active');
-            
+
             if (!flowId || !name || !prompt) {
                 showAlert('Por favor completa todos los campos requeridos', 'error');
                 return;
             }
 
+            // Build menu config if enabled
             let menuConfig = null;
             if (hasMenu) {
                 const welcomeMessage = document.getElementById('menu-welcome').value.trim();
                 const footerMessage = document.getElementById('menu-footer').value.trim();
-                
+
                 if (!welcomeMessage) {
-                    showAlert('El mensaje de bienvenida es requerido para el modo menú', 'error');
+                    showAlert('El mensaje de bienvenida es requerido para el modo menu', 'error');
                     return;
                 }
 
                 const options = [];
                 const optionElements = document.querySelectorAll('.menu-option-item');
-                
+
                 if (optionElements.length === 0) {
-                    showAlert('Debes agregar al menos una opción al menú', 'error');
+                    showAlert('Debes agregar al menos una opcion al menu', 'error');
                     return;
                 }
 
                 optionElements.forEach((element, index) => {
-                    const label = element.querySelector(`#option-label-${index}`).value.trim();
-                    const response = element.querySelector(`#option-response-${index}`).value.trim();
-                    
-                    if (label && response) {
-                        options.push({ label, response });
+                    const labelEl = element.querySelector(`#option-label-${index}`);
+                    const responseEl = element.querySelector(`#option-response-${index}`);
+                    if (labelEl && responseEl) {
+                        const label = labelEl.value.trim();
+                        const resp = responseEl.value.trim();
+                        if (label && resp) {
+                            options.push({ label, response: resp });
+                        }
                     }
                 });
 
                 if (options.length === 0) {
-                    showAlert('Completa al menos una opción del menú', 'error');
+                    showAlert('Completa al menos una opcion del menu', 'error');
                     return;
                 }
 
-                menuConfig = {
-                    welcomeMessage,
-                    footerMessage: footerMessage || 'Escribe el número de tu opción',
-                    options
-                };
+                menuConfig = { welcomeMessage, footerMessage: footerMessage || 'Escribe el numero de tu opcion', options };
             }
-            
+
             try {
                 let response;
-                
+
                 if (editingFlowId) {
                     response = await fetch(`${API_BASE}/api/flows/${editingFlowId}`, {
                         method: 'PUT',
@@ -1549,15 +1551,15 @@
                         body: JSON.stringify({ flowId, name, description, prompt, hasMenu, menuConfig })
                     });
                 }
-                
+
                 const data = await response.json();
-                
-                if (data.success) {
-                    showAlert(data.message, 'success');
+
+                if (data.status === 'created' || data.status === 'updated') {
+                    showAlert(editingFlowId ? 'Modo actualizado' : 'Modo creado', 'success');
                     closeFlowModal();
                     loadFlows();
                 } else {
-                    showAlert(data.message || 'Error al guardar el modo', 'error');
+                    showAlert(data.error || 'Error al guardar el modo', 'error');
                 }
             } catch (error) {
                 showAlert('Error al guardar el modo', 'error');
@@ -1566,22 +1568,19 @@
         }
 
         async function deleteFlow(flowId) {
-            if (!confirm('¿Estás seguro de que deseas eliminar este modo personalizado?')) {
-                return;
-            }
-            
+            if (!confirm('Eliminar este modo personalizado?')) return;
+
             try {
                 const response = await fetch(`${API_BASE}/api/flows/${flowId}`, {
                     method: 'DELETE'
                 });
-                
                 const data = await response.json();
-                
-                if (data.success) {
+
+                if (data.status === 'deleted') {
                     showAlert('Modo eliminado correctamente', 'success');
                     loadFlows();
                 } else {
-                    showAlert(data.message || 'Error al eliminar el modo', 'error');
+                    showAlert(data.error || 'Error al eliminar el modo', 'error');
                 }
             } catch (error) {
                 showAlert('Error al eliminar el modo', 'error');

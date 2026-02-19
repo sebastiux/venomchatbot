@@ -48,6 +48,8 @@ interface BotConfig {
 
 class ConfigService {
     private configPath: string
+    private recentMessagesMemory: RecentMessage[] = []
+    private userConfigsMemory: Record<string, UserConfig> = {}
 
     constructor() {
         this.configPath = process.env.CONFIG_FILE_PATH || './config/bot-config.json'
@@ -403,15 +405,24 @@ class ConfigService {
         if (redisService.isConnected) {
             await redisService.lPush(R.RECENT_MESSAGES, JSON.stringify(msg))
             await redisService.lTrim(R.RECENT_MESSAGES, 0, MAX_RECENT_MESSAGES - 1)
+        } else {
+            // Fallback: in-memory storage
+            this.recentMessagesMemory.unshift(msg)
+            if (this.recentMessagesMemory.length > MAX_RECENT_MESSAGES) {
+                this.recentMessagesMemory = this.recentMessagesMemory.slice(0, MAX_RECENT_MESSAGES)
+            }
         }
     }
 
     async getRecentMessages(limit = 50): Promise<RecentMessage[]> {
-        if (!redisService.isConnected) return []
-        const raw = await redisService.lRange(R.RECENT_MESSAGES, 0, limit - 1)
-        return raw.map((s) => {
-            try { return JSON.parse(s) } catch { return null }
-        }).filter(Boolean) as RecentMessage[]
+        if (redisService.isConnected) {
+            const raw = await redisService.lRange(R.RECENT_MESSAGES, 0, limit - 1)
+            return raw.map((s) => {
+                try { return JSON.parse(s) } catch { return null }
+            }).filter(Boolean) as RecentMessage[]
+        }
+        // Fallback: in-memory
+        return this.recentMessagesMemory.slice(0, limit)
     }
 
     // ============= User-specific Configs =============
@@ -422,13 +433,16 @@ class ConfigService {
             if (raw) {
                 try { return JSON.parse(raw) } catch { /* fall through */ }
             }
+            return {}
         }
-        return {}
+        return { ...this.userConfigsMemory }
     }
 
     private async saveUserConfigs(configs: Record<string, UserConfig>): Promise<void> {
         if (redisService.isConnected) {
             await redisService.set(R.USER_CONFIGS, JSON.stringify(configs))
+        } else {
+            this.userConfigsMemory = { ...configs }
         }
     }
 

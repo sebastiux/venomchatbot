@@ -321,30 +321,104 @@ app.post('/api/flow/activate', async (req, res) => {
     })
 })
 
+app.get('/api/flows/:flowId', async (req, res) => {
+    const flowData = await configService.getFlowData(req.params.flowId)
+    if (!flowData) {
+        return res.status(404).json({ error: 'Flow not found' })
+    }
+    res.json({
+        id: req.params.flowId,
+        name: flowData.name || req.params.flowId,
+        description: flowData.description || '',
+        system_prompt: flowData.prompt || '',
+        is_builtin: flowData.is_builtin || false,
+        flow_type: flowData.has_menu ? 'menu' : 'intelligent',
+        welcome_message: flowData.menu_config?.welcome_message || null,
+        footer_message: flowData.menu_config?.footer_message || null,
+        menu_options: flowData.menu_config?.options || null,
+    })
+})
+
 app.post('/api/flows', async (req, res) => {
     const body = req.body
+    const flowId = body.id || body.flowId
+    const prompt = body.system_prompt || body.prompt || ''
+    const hasMenu = body.flow_type === 'menu' || body.hasMenu || false
+
     let menuConfig = undefined
-    if (body.flow_type === 'menu' && body.menu_options) {
-        menuConfig = {
-            welcome_message: body.welcome_message || '',
-            footer_message: body.footer_message || '',
-            options: body.menu_options,
+    if (hasMenu) {
+        if (body.menu_options) {
+            menuConfig = {
+                welcome_message: body.welcome_message || '',
+                footer_message: body.footer_message || '',
+                options: body.menu_options,
+            }
+        } else if (body.menuConfig) {
+            menuConfig = {
+                welcome_message: body.menuConfig.welcomeMessage || body.menuConfig.welcome_message || '',
+                footer_message: body.menuConfig.footerMessage || body.menuConfig.footer_message || '',
+                options: body.menuConfig.options || [],
+            }
         }
     }
 
     const result = await configService.createCustomFlow(
-        body.id,
+        flowId,
         body.name,
-        body.description,
-        body.system_prompt,
-        body.flow_type === 'menu',
+        body.description || '',
+        prompt,
+        hasMenu,
         menuConfig
     )
 
     if (!result.success) {
         return res.status(400).json({ error: result.message })
     }
-    res.json({ status: 'created', flow_id: body.id })
+    res.json({ status: 'created', flow_id: flowId })
+})
+
+app.put('/api/flows/:flowId', async (req, res) => {
+    const body = req.body
+    const prompt = body.system_prompt || body.prompt || undefined
+    const hasMenu = body.flow_type === 'menu' || body.hasMenu || false
+
+    let menuConfig = undefined
+    if (hasMenu) {
+        if (body.menu_options) {
+            menuConfig = {
+                welcome_message: body.welcome_message || '',
+                footer_message: body.footer_message || '',
+                options: body.menu_options,
+            }
+        } else if (body.menuConfig) {
+            menuConfig = {
+                welcome_message: body.menuConfig.welcomeMessage || body.menuConfig.welcome_message || '',
+                footer_message: body.menuConfig.footerMessage || body.menuConfig.footer_message || '',
+                options: body.menuConfig.options || [],
+            }
+        }
+    }
+
+    const result = await configService.updateCustomFlow(req.params.flowId, {
+        name: body.name,
+        description: body.description,
+        prompt,
+        has_menu: hasMenu,
+        menu_config: menuConfig,
+    })
+
+    if (!result.success) {
+        return res.status(400).json({ error: result.message })
+    }
+    res.json({ status: 'updated', flow_id: req.params.flowId })
+})
+
+app.delete('/api/flows/:flowId', async (req, res) => {
+    const result = await configService.deleteCustomFlow(req.params.flowId)
+    if (!result.success) {
+        return res.status(400).json({ error: result.message })
+    }
+    res.json({ status: 'deleted', flow_id: req.params.flowId })
 })
 
 // --- Recent Messages ---
