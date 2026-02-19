@@ -23,8 +23,7 @@ export interface BlacklistResponse {
 
 // Flow Types
 export interface MenuOption {
-  number: number;
-  text: string;
+  label: string;
   response: string;
 }
 
